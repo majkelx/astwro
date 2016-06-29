@@ -1,4 +1,5 @@
 import os
+import io
 import shutil
 from tempfile import mkdtemp
 from subprocess32 import Popen, PIPE, STDOUT
@@ -67,9 +68,12 @@ class Runner(object):
                              stdout=PIPE if self.read_std_out else None,
                              stderr=STDOUT if self.read_std_err else None,
                              cwd=self.dir)
-        self.fd_stdin  = self.process.stdin.fileno()
+        self.fd_stdin = self.process.stdin.fileno()
         if self.read_std_out:
-            self.output_processor_chain = StreamKeeper(self.process.stdout)
+            stdoutsream = self.process.stdout
+            if (isinstance(stdoutsream, file)):  # switch to modern io
+                stdoutsream = io.open(stdoutsream.fileno())
+            self.output_processor_chain = StreamKeeper(stdoutsream)
         # setting output pipes as nonblocking
         # for pipe in [self.process.stdout, self.process.stderr]:
         #     fd = pipe.fileno()

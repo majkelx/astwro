@@ -32,7 +32,7 @@ class DPRunner(Runner):
     def attach(self, image_file):
         filename = self.link_to_working_dir(image_file, 'input.fits')
         self.attach_processor = DaophotAttachOP()
-        self.interact('attach\ninput.fits\n', output_processor=self.attach_processor)
+        self.interact('attach\ninput.fits\n\n', output_processor=self.attach_processor)
 
     def find(self):
         pass

@@ -53,12 +53,13 @@ class OutputLinesProcessor(OutputProvider):
         return True
 
     def consume(self):
-        rd = self.stream.read()
-        rd = os.read(self.stream.fileno(), 1000)
-        print(rd)
-        rd = os.read(self.stream.fileno(), 1000)
-        print(rd)
-        for line in self.stream.xreadlines():
+#        rd = self.stream.read()
+#        rd = os.read(self.stream.fileno(), 20)
+#        print(rd)
+#        rd = self.stream.readline()
+#        rd = os.read(self.stream.fileno(), 1000)
+#        print(rd)
+        for line in self.stream:
             debug("Output line: " + line)
             last_one = self.process_line(line)
             if last_one:
