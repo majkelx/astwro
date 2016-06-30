@@ -2,16 +2,20 @@ from logging import *
 from pydaophot import daophot
 import os
 
-#basicConfig(level=DEBUG)
+basicConfig(level=DEBUG)
+fits = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'NGC6871.fits')
 
 dphot = daophot()
-fits = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'NGC6871.fits')
-dphot.attach(fits)
+#dphot.get_options()
+dphot.OPtion('RE', 1.77)
+dphot.ATtach(fits)
+dphot.OPtion('FI', 12)
+#op =  dphot.get_options()
+#for op in op.items():
+#    print op
 print ("Image size: ", dphot.get_pic_size())
 dphot.find()
 dphot.close()
-
-debug ("wrk dir: %s", dphot.dir)
-debug ("process: %s", dphot.process)
-
+print (dphot.get_options())
+print (dphot.get_option('FITTING RADIUS'))
 

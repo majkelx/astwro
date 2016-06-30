@@ -44,6 +44,7 @@ class Runner(object):
     def prepare_dir(self, dir=None, preserve_dir=False):
         if dir is None:
             dir = mkdtemp(prefix='pydaophot_tmp')
+            debug('Using temp dir %s', dir)
             if not preserve_dir:
                 self.dir_is_tmp = True
         self.dir = dir
@@ -63,11 +64,16 @@ class Runner(object):
     def run(self):
         if self.dir is None:
             self.prepare_dir()
-        self.process = Popen([self.executable],
-                             stdin=PIPE,
-                             stdout=PIPE if self.read_std_out else None,
-                             stderr=STDOUT if self.read_std_err else None,
-                             cwd=self.dir)
+        try:
+            self.process = Popen([self.executable],
+                                 stdin=PIPE,
+                                 stdout=PIPE if self.read_std_out else None,
+                                 stderr=STDOUT if self.read_std_err else None,
+                                 cwd=self.dir)
+        except OSError as e:
+            error('Check if executable: %s is in PATH, modify executable name/path in pydaophot.cfg', self.executable)
+            raise e
+
         self.fd_stdin = self.process.stdin.fileno()
         if self.read_std_out:
             stdoutsream = self.process.stdout
