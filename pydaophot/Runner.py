@@ -2,7 +2,7 @@ import os
 import io
 import shutil
 from tempfile import mkdtemp
-from subprocess32 import Popen, PIPE, STDOUT
+from subprocess import call
 # from fcntl import fcntl, F_GETFL, F_SETFL
 from logging import *
 from .OutputProviders import StreamKeeper, OutputProvider
@@ -17,6 +17,7 @@ class Runner(object):
     dir = None
     dir_is_tmp = False
     cfg = None
+    commands = ''
     # whether output from executable is captured
     read_std_out = False
     read_std_err = False
@@ -45,7 +46,7 @@ class Runner(object):
 
     def prepare_dir(self, dir=None, preserve_dir=False):
         if dir is None:
-            dir = mkdtemp(prefix='pydaophot_tmp', dir='/tmp')
+            dir = mkdtemp(prefix='pydaophot_tmp')
             debug('Using temp dir %s', dir)
             if not preserve_dir:
                 self.dir_is_tmp = True
@@ -76,7 +77,9 @@ class Runner(object):
     def run(self):
         if self.dir is None:
             self.prepare_dir()
+        self.commands += 'EXIT\n'
         try:
+
             self.process = Popen([self.executable],
                                  stdin=PIPE,
                                  stdout=PIPE if self.read_std_out else None,
@@ -99,29 +102,14 @@ class Runner(object):
         #     flags = fcntl(fd, F_GETFL)
         #     fcntl(fd, F_SETFL, flags | os.O_NONBLOCK)
 
-    def interact(self, std_in=None, output_processor=None):
-        if std_in is not None:
-            os.write(self.fd_stdin, std_in)
-            debug('IN:\n%s', std_in)
+    def interact(self, std_in, output_processor=None):
+        self.commands += std_in
         if self.read_std_out:  # add output processor into chain
-            assert output_processor is not None
             assert isinstance(output_processor, OutputProvider)
             output_processor.prev_in_chain = self.output_processor_chain
             self.output_processor_chain = output_processor
         return output_processor
-        # try:
-        #     std_outs = self.process.communicate(std_in, 1000)
-        # except TimeoutExpired as e:
-        #     std_outs = e.output, ''
-        #     pass
 
     def on_exit(self):
         pass
-
-    # @staticmethod
-    # def _try_read_pipe(fd):
-    #     try:
-    #         return os.read(fd, MAX_BUF)
-    #     except OSError:
-    #         return ''
 
