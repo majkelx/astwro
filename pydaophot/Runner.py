@@ -29,7 +29,9 @@ class Runner(object):
     def __init__(self, config=None):
         self.cfg = config
 
-    def close(self):
+    def close(self, exit_nicely = True):
+        if exit_nicely:
+            self.on_exit()
         if self.process is not None:
             self.process.terminate()
         if self.dir_is_tmp:
@@ -43,15 +45,16 @@ class Runner(object):
 
     def prepare_dir(self, dir=None, preserve_dir=False):
         if dir is None:
-            dir = mkdtemp(prefix='pydaophot_tmp')
+            dir = mkdtemp(prefix='pydaophot_tmp', dir='/tmp')
             debug('Using temp dir %s', dir)
             if not preserve_dir:
                 self.dir_is_tmp = True
         self.dir = dir
         self.init_config_files(dir)
 
-    def copy_to_working_dir(self, source):
-        shutil.copy(source, self.dir)
+    def copy_to_working_dir(self, source, filename=None):
+        dst = self.dir if filename is None else os.path.join(self.dir, filename)
+        shutil.copy(source, dst)
 
     def link_to_working_dir(self, source, link_filename=None):
         if link_filename is None:
@@ -61,6 +64,15 @@ class Runner(object):
     def copy_from_working_dir(self, filename, dest='.'):
         shutil.copy(os.path.join(self.dir, filename), dest)
 
+    def exist_in_working_dir(self, filename):
+        return os.path.exists(os.path.join(self.dir, filename))
+
+    def rm_from_working_dir(self, filename):
+        try:
+            os.remove(os.path.join(self.dir, filename))
+        except OSError:
+            pass
+
     def run(self):
         if self.dir is None:
             self.prepare_dir()
@@ -69,7 +81,8 @@ class Runner(object):
                                  stdin=PIPE,
                                  stdout=PIPE if self.read_std_out else None,
                                  stderr=STDOUT if self.read_std_err else None,
-                                 cwd=self.dir)
+                                 cwd=self.dir
+                                 )
         except OSError as e:
             error('Check if executable: %s is in PATH, modify executable name/path in pydaophot.cfg', self.executable)
             raise e
@@ -102,11 +115,13 @@ class Runner(object):
         #     std_outs = e.output, ''
         #     pass
 
+    def on_exit(self):
+        pass
 
-    @staticmethod
-    def _try_read_pipe(fd):
-        try:
-            return os.read(fd, MAX_BUF)
-        except OSError:
-            return ''
+    # @staticmethod
+    # def _try_read_pipe(fd):
+    #     try:
+    #         return os.read(fd, MAX_BUF)
+    #     except OSError:
+    #         return ''
 

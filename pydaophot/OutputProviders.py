@@ -96,6 +96,14 @@ r_command = re.compile(r'Command:')
 r_pic_size = re.compile(r'(?<=Picture size:\s\s\s)([0-9]+)\s+([0-9]+)')
 #     for options listing like FWHM OF OBJECT =     5.00   THRESHOLD (in sigmas) =     3.50
 r_opt = re.compile(r'\b(\w\w)[^=\n]*=\s*(\-?[0-9]+\.[0-9]*)')
+#     for FInd:
+r_find = re.compile((
+    r'Sky mode and standard deviation = +(-?\d+\.\d*) +(-?\d+\.\d*)\n+ +'
+    r'Clipped mean and median = +(-?\d+\.\d*)\s+(-?\d+\.\d*)\n +'
+    r'Number of pixels used \(after clip\) = (-?\d+),(-?\d+)\n +'
+    r'Relative error = +(-?\d+\.\d*)(?:\n.*)+\s'
+    r'(\d+) stars'
+))
 
 
 class DaophotCommandOutputProcessor(OutputBufferedProcessor):
@@ -105,7 +113,7 @@ class DaophotCommandOutputProcessor(OutputBufferedProcessor):
         return counter > 2 and r_command.search(line) is not None
 
 
-class DaophotAttachOP(DaophotCommandOutputProcessor):
+class DPOP_ATtach(DaophotCommandOutputProcessor):
 
     def get_picture_size(self):
         """returns tuple with (x,y) size of pic returned by 'attach' """
@@ -119,7 +127,7 @@ class DaophotAttachOP(DaophotCommandOutputProcessor):
         self.get_picture_size()
 
 
-class DaophotOptOP(DaophotCommandOutputProcessor):
+class DPOP_OPtion(DaophotCommandOutputProcessor):
     options = None
     def get_options(self):
         """returns dictionary of options: XX: 'nnn.dd'
@@ -138,3 +146,16 @@ class DaophotOptOP(DaophotCommandOutputProcessor):
 
     def raise_if_error(self, line):
         self.get_options()
+
+class DpOp_FInd(DaophotCommandOutputProcessor):
+    data = None
+    def get_data(self):
+        if self.data is None:
+            buf = self.get_buffer()
+            match = r_find.search(buf)
+            if match is None:
+                raise Exception('daophot find output doesnt match regexp r_find:'
+                                ' error (or regexp is wrong). Output buffer:\n ' + buf)
+            self.data = match.groups()
+        return self.data
+
