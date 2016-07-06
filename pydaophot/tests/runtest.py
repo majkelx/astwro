@@ -22,7 +22,7 @@ fits = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'NGC6871.fits')
 
 #dphot.close()
 
-for i in range(100):
+for i in range(10):
     print i,
     dphot = daophot()
     dphot.ATtach(fits)
