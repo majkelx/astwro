@@ -17,6 +17,8 @@ class StreamKeeper(AbstractOutputProvider):
         self.stream = stream
 
     def get_output_stream(self):
+        if self.stream is None:
+            raise Exception('No output stream available, call run() before collecting results.')
         return self.stream
 
 
@@ -109,9 +111,7 @@ r_find = re.compile((
 class DaophotCommandOutputProcessor(OutputBufferedProcessor):
 
     def is_last_one(self, line, counter):
-        # last line of command output is "Command:", skip leading "Command: " lines
-        return counter > 2 and r_command.search(line) is not None
-
+        return r_command.search(line) is not None
 
 class DPOP_ATtach(DaophotCommandOutputProcessor):
 
@@ -158,4 +158,28 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
                                 ' error (or regexp is wrong). Output buffer:\n ' + buf)
             self.data = match.groups()
         return self.data
+
+    def get_sky(self):
+        return self.get_data()[0]
+
+    def get_stddev(self):
+        return self.get_data()[1]
+
+    def get_mean(self):
+        return self.get_data()[2]
+
+    def get_median(self):
+        return self.get_data()[3]
+
+    def get_pix1(self):
+        return self.get_data()[4]
+
+    def get_pix2(self):
+        return self.get_data()[5]
+
+    def get_err(self):
+        return self.get_data()[6]
+
+    def get_stras(self):
+        return self.get_data()[7]
 

@@ -18,15 +18,10 @@ class DPRunner(Runner):
         self.daophotopt = daophotopt if daophotopt is not None else os.path.join(get_package_config_path(),'daophot.opt')
         self.photoopt   = photoopt   if photoopt   is not None else os.path.join(get_package_config_path(),'photo.opt')
 
-        self.read_std_out = True
-
-        self.run()
-        info('Runner for executable: %s running', self.executable)
         self.OPtion_result = DPOP_OPtion()
-        self.interact('\n', output_processor=self.OPtion_result)
+        self.interact('', output_processor=self.OPtion_result)
 
     def on_exit(self):
-        self.EXit(wait = True)
         pass
 
     def init_config_files(self, dir):
@@ -52,15 +47,12 @@ class DPRunner(Runner):
 #        self.link_to_working_dir(image_file, 'i.fits')
         self.copy_to_working_dir(image_file, 'i.fits')
         processor = DPOP_ATtach()
-        self.interact('ATTACH\ni.fits\n\n', output_processor=processor)
+        self.interact('ATTACH\ni.fits\n', output_processor=processor)
         self.ATtach_result = processor
         return processor
 
-    def EXit(self, wait=False, timeout=None):
+    def EXit(self):
         self.interact('EXIT\n', output_processor=DaophotCommandOutputProcessor())
-        if wait:
-            self.process.wait(timeout=timeout)
-
 
     def OPtion(self, options, value=None):
         """Set daophot option(s). options can be either:
@@ -71,8 +63,8 @@ class DPRunner(Runner):
                 filename string of daophot.opt-formatted file:
                                         dp.OPtion('opts/newdaophot.opt')
                 """
-        if self.ATtach_result is None:
-            warning('daophot (at least some version) crashes on ATtach after OPtion. Expect crash on next ATtach.')
+        # if self.ATtach_result is None:
+        #     warning('daophot (at least some version) crashes on ATtach after OPtion. Expect crash on next ATtach.')
         commands = 'OPT\n'
         if isinstance(options, str) and value is None:  # filename
             # daophot operates in his tmp dir and has limited buffer for file path
@@ -86,7 +78,7 @@ class DPRunner(Runner):
             elif isinstance(options, dict):
                 options = options.items()
             commands += ''.join('%s=%.2f\n' % (k,float(v)) for k,v in options)
-            commands += '\n\n'
+            commands += '\n'
         processor = DPOP_OPtion()
         self.interact(commands, output_processor=processor)
         self.OPtion_result = processor
@@ -96,7 +88,7 @@ class DPRunner(Runner):
         if self.ATtach_result is None:
             raise Exception('No imput file attached, call ATttache first.')
         self.rm_from_working_dir(positions_file)
-        commands = 'FIND\n{},{}\n{}\nyes\n\n'.format(frames_av, frames_sum, positions_file)
+        commands = 'FIND\n{},{}\n{}\nyes\n'.format(frames_av, frames_sum, positions_file)
         processor = DpOp_FInd()
         self.interact(commands, output_processor=processor)
         self.FInd_result = processor

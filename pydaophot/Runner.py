@@ -1,45 +1,36 @@
 import os
-import io
 import shutil
 from tempfile import mkdtemp
-from subprocess import call
-# from fcntl import fcntl, F_GETFL, F_SETFL
+try:
+    from StringIO import StringIO  # python2
+except ImportError:
+    from io import StringIO # python3
+import subprocess as sp
 from logging import *
 from .OutputProviders import StreamKeeper, OutputProvider
-
-MAX_BUF = 1000
 
 
 class Runner(object):
 
     executable = None
-    process = None
     dir = None
     dir_is_tmp = False
     cfg = None
     commands = ''
-    # whether output from executable is captured
-    read_std_out = False
-    read_std_err = False
-    # pipes file descriptors
-    fd_stdin  = None
-    fd_stdout = None
+    output = None
     # chain of 'lazy' output processors
     output_processor_chain = None
+    stream_keeper = None
 
     def __init__(self, config=None):
         self.cfg = config
+        self.stream_keeper = StreamKeeper()
+        self.output_processor_chain = self.stream_keeper
+        self.prepare_dir()
 
-    def close(self, exit_nicely = True):
-        if exit_nicely:
-            self.on_exit()
-        if self.process is not None:
-            self.process.terminate()
-        if self.dir_is_tmp:
-            shutil.rmtree(self.dir)
-        self.process = None
-        self.dir = None
-        self.dir_is_tmp = False
+
+    def close(self):
+        self.on_exit()
 
     def init_config_files(self, dir):
         pass
@@ -75,39 +66,25 @@ class Runner(object):
             pass
 
     def run(self):
-        if self.dir is None:
-            self.prepare_dir()
-        self.commands += 'EXIT\n'
         try:
-
-            self.process = Popen([self.executable],
-                                 stdin=PIPE,
-                                 stdout=PIPE if self.read_std_out else None,
-                                 stderr=STDOUT if self.read_std_err else None,
-                                 cwd=self.dir
-                                 )
+            process = sp.Popen([self.executable],
+                                    stdin=sp.PIPE,
+                                    stdout=sp.PIPE,
+                                    cwd=self.dir)
+            info('STDIN:\n' + self.commands)
+            self.output = process.communicate(self.commands)[0]
         except OSError as e:
             error('Check if executable: %s is in PATH, modify executable name/path in pydaophot.cfg', self.executable)
             raise e
-
-        self.fd_stdin = self.process.stdin.fileno()
-        if self.read_std_out:
-            stdoutsream = self.process.stdout
-            if (isinstance(stdoutsream, file)):  # switch to modern io
-                stdoutsream = io.open(stdoutsream.fileno())
-            self.output_processor_chain = StreamKeeper(stdoutsream)
-        # setting output pipes as nonblocking
-        # for pipe in [self.process.stdout, self.process.stderr]:
-        #     fd = pipe.fileno()
-        #     flags = fcntl(fd, F_GETFL)
-        #     fcntl(fd, F_SETFL, flags | os.O_NONBLOCK)
+        info('STDOUT:\n' + self.output)
+        self.stream_keeper.stream = StringIO(self.output)
 
     def interact(self, std_in, output_processor=None):
         self.commands += std_in
-        if self.read_std_out:  # add output processor into chain
-            assert isinstance(output_processor, OutputProvider)
-            output_processor.prev_in_chain = self.output_processor_chain
-            self.output_processor_chain = output_processor
+        if not isinstance(output_processor, OutputProvider):
+            raise TypeError('output_processor must OutputProvider subclass')
+        output_processor.prev_in_chain = self.output_processor_chain
+        self.output_processor_chain = output_processor
         return output_processor
 
     def on_exit(self):

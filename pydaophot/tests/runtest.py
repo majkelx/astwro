@@ -2,7 +2,7 @@ from logging import *
 from pydaophot import daophot
 import os
 
-basicConfig(level=DEBUG)
+basicConfig(level=INFO)
 fits = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'NGC6871.fits')
 
 #dphot = daophot()
@@ -23,7 +23,18 @@ fits = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'NGC6871.fits')
 #dphot.close()
 
 for i in range(10):
-    print i,
-    dphot = daophot()
-    dphot.ATtach(fits)
-    dphot.close()
+    info('###ITERATION %d' % i)
+    dphot1 = daophot()
+    dphot2 = daophot()
+    dphot1.ATtach(fits)
+    dphot2.ATtach(fits)
+    dphot2.OPtion('FITTING', 5.5)
+    dphot1.FInd(1,1)
+    dphot2.FInd(1,1)
+    dphot1.run()
+    dphot2.run()
+    print dphot1.FInd_result.get_stras(), dphot2.OPtion_result.get_option('FI')
+    dphot2.FInd_result.get_data()
+#    dphot.EXit(True)
+    dphot1.close()
+    dphot2.close()
