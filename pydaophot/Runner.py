@@ -18,13 +18,14 @@ class Runner(object):
     cfg = None
     commands = ''
     output = None
+    process = None
     # chain of 'lazy' output processors
     output_processor_chain = None
     stream_keeper = None
 
     def __init__(self, config=None):
         self.cfg = config
-        self.stream_keeper = StreamKeeper()
+        self.stream_keeper = StreamKeeper(runner=self)
         self.output_processor_chain = self.stream_keeper
         self.prepare_dir()
 
@@ -72,21 +73,35 @@ class Runner(object):
             path = os.path.abspath(os.path.expanduser(path))
         return path
 
-    def run(self):
+    def run(self, wait = True):
         try:
-            process = sp.Popen([self.executable],
+            self.process = sp.Popen([self.executable],
                                     stdin=sp.PIPE,
                                     stdout=sp.PIPE,
                                     cwd=self.dir)
-            info('STDIN:\n' + self.commands)
-            self.output = process.communicate(self.commands)[0]
         except OSError as e:
             error('Check if executable: %s is in PATH, modify executable name/path in pydaophot.cfg', self.executable)
             raise e
+        info('STDIN:\n' + self.commands)
+        if wait:
+            self.__communcate(self.commands)
+        else:
+            self.process.stdin.write(self.commands)
+
+    def wait_for_results (self):
+        if self.output is None:
+            if self.process is None:
+                raise Exception('Call run() before asking for results.')
+            self.__communcate()
+
+    def __communcate(self, input=None):
+        self.output = self.process.communicate(input)[0]
         info('STDOUT:\n' + self.output)
         self.stream_keeper.stream = StringIO(self.output)
 
     def interact(self, std_in, output_processor=None):
+        if self.process is not None:
+            raise Exception('Process iw/was running. Cannot add commands. (call reset() ?)')
         self.commands += std_in
         if not isinstance(output_processor, OutputProvider):
             raise TypeError('output_processor must OutputProvider subclass')

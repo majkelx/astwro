@@ -14,6 +14,8 @@ class fname:
     STARS_FILE = 'i.coo'
     PHOTOMETRY_FILE = 'i.ap'
     PSF_STARS_FILE = 'i.lst'
+    NEIGHBOURS_FILE = 'i.nei'
+    PSF_FILE = 'i.psf'
 
 
 
@@ -27,6 +29,7 @@ class DPRunner(Runner):
     PHotometry_result = None
     PIck_result = None
     PSf_result = None
+
 
     def __init__(self, config = None, daophotopt=None, photoopt=None):
         Runner.__init__(self, config)
@@ -144,4 +147,21 @@ class DPRunner(Runner):
         self.interact(commands, output_processor=processor)
         self.PIck_result = processor
         return processor
+
+    def PSf(self, photometry_file=None, psf_stars_file=None, psf_file=None):
+        if psf_file is None:
+            self.rm_from_working_dir(fname.PSF_FILE)
+        photometry_file = self.expand_default_file_path(photometry_file)
+        psf_stars_file = self.expand_default_file_path(psf_stars_file)
+        psf_file = self.expand_default_file_path(psf_file)
+        commands = 'PSF\n{}\n{}\n{}\n'.format(
+            photometry_file,
+            psf_stars_file,
+            psf_file
+        )
+        processor = DpOp_PSf()
+        self.interact(commands, output_processor=processor)
+        self.PSf_result = processor
+        return processor
+
 

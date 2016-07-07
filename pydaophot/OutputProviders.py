@@ -12,11 +12,14 @@ class AbstractOutputProvider(object):
 class StreamKeeper(AbstractOutputProvider):
     """First in the chain, just keeps stream handler"""
     stream = None
+    runner = None
 
-    def __init__(self, stream=None):
+    def __init__(self, runner=None, stream=None):
         self.stream = stream
+        self.runner = runner
 
     def get_output_stream(self):
+        self.runner.wait_for_results()
         if self.stream is None:
             raise Exception('No output stream available, call run() before collecting results.')
         return self.stream
@@ -102,7 +105,7 @@ r_opt = re.compile(r'\b(\w\w)[^=\n]*=\s*(\-?[0-9]+\.[0-9]*)')
 r_find = re.compile(
     r'Sky mode and standard deviation = +(-?\d+\.\d*) +(-?\d+\.\d*)\n+ +'
     r'Clipped mean and median = +(-?\d+\.\d*)\s+(-?\d+\.\d*)\n +'
-    r'Number of pixels used \(after clip\) = (-?\d+),(-?\d+)\n +'
+    r'Number of pixels used \(after clip\) = (\d*),?(\d+)\n +'
     r'Relative error = +(-?\d+\.\d*)(?:\n.*)+\s'
     r'(\d+) stars'
 )
@@ -110,6 +113,9 @@ r_find = re.compile(
 r_phot = re.compile(r'Estimated magnitude limit \(Aperture 1\): +(-?\d+\.\d*) +\+- +(-?\d+\.\d*) +per star')
 #    for PIck
 r_pick = re.compile(r'(\d+) +suitable candidates')
+#    for PSf
+r_psf = re.compile(r'Chi    Parameters...\n>* +(-?\d+\.\d*) +(-?\d+\.\d*) +(-?\d+\.\d*)')
+r_psf_errors = re.compile(r' (\d+) +(\d+.\d+) [ ?*]')
 
 
 
@@ -165,27 +171,29 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
         return self.data
 
     def get_sky(self):
-        return self.get_data()[0]
+        return float(self.get_data()[0])
 
     def get_stddev(self):
-        return self.get_data()[1]
+        return float(self.get_data()[1])
 
     def get_mean(self):
-        return self.get_data()[2]
+        return float(self.get_data()[2])
 
     def get_median(self):
-        return self.get_data()[3]
+        return float(self.get_data()[3])
 
-    def get_pix1(self):
-        return self.get_data()[4]
-
-    def get_pix2(self):
-        return self.get_data()[5]
+    def get_pixels(self):
+        t = self.get_data()[4]
+        if t is None or t == '':
+            t = 0
+        else:
+            t = int(t) * 1000
+        return int(self.get_data()[5]) + t
 
     def get_err(self):
         return self.get_data()[6]
 
-    def get_stras(self):
+    def get_stars(self):
         return self.get_data()[7]
 
 class DpOp_PHotometry(DaophotCommandOutputProcessor):
@@ -201,10 +209,10 @@ class DpOp_PHotometry(DaophotCommandOutputProcessor):
         return self.data
 
     def get_mag_limit(self):
-        return self.get_data()[0]
+        return float(self.get_data()[0])
 
     def get_mag_err(self):
-        return self.get_data()[1]
+        return float(self.get_data()[1])
 
 class DpOp_PIck(DaophotCommandOutputProcessor):
     stars = None
@@ -217,4 +225,33 @@ class DpOp_PIck(DaophotCommandOutputProcessor):
                                 ' error (or regexp is wrong). Output buffer:\n ' + buf)
             self.stars = int(match.group(1))
         return self.stars
+
+
+class DpOp_PSf(DaophotCommandOutputProcessor):
+    data = None
+    errors = None
+
+    def get_errors(self):
+        if self.errors is None:
+            buf = self.get_buffer()
+            self.errors = [(int(star), float(err)) for star, err in r_psf_errors.findall(buf)]
+        return self.errors
+
+
+    def get_data(self):
+        if self.data is None:
+            buf = self.get_buffer()
+            match = r_psf.search(buf)
+            if match is None:
+                raise Exception('daophot PSF output doesnt match regexp r_psf:'
+                                ' error (or regexp is wrong). Output buffer:\n ' + buf)
+            self.data = match.groups()
+        return self.data
+
+    def get_chi(self):
+        return float(self.get_data()[0])
+
+    def get_hwhm_xy(self):
+        return float(self.get_data()[1]), float(self.get_data()[2])
+
 
