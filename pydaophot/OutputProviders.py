@@ -99,13 +99,15 @@ r_pic_size = re.compile(r'(?<=Picture size:\s\s\s)([0-9]+)\s+([0-9]+)')
 #     for options listing like FWHM OF OBJECT =     5.00   THRESHOLD (in sigmas) =     3.50
 r_opt = re.compile(r'\b(\w\w)[^=\n]*=\s*(\-?[0-9]+\.[0-9]*)')
 #     for FInd:
-r_find = re.compile((
+r_find = re.compile(
     r'Sky mode and standard deviation = +(-?\d+\.\d*) +(-?\d+\.\d*)\n+ +'
     r'Clipped mean and median = +(-?\d+\.\d*)\s+(-?\d+\.\d*)\n +'
     r'Number of pixels used \(after clip\) = (-?\d+),(-?\d+)\n +'
     r'Relative error = +(-?\d+\.\d*)(?:\n.*)+\s'
     r'(\d+) stars'
-))
+)
+#    for PHotometry
+r_phot = re.compile(r'Estimated magnitude limit \(Aperture 1\): +(-?\d+\.\d*) +\+- +(-?\d+\.\d*) +per star')
 
 
 class DaophotCommandOutputProcessor(OutputBufferedProcessor):
@@ -182,4 +184,23 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
 
     def get_stras(self):
         return self.get_data()[7]
+
+class DpOp_PHotometry(DaophotCommandOutputProcessor):
+    data = None
+    def get_data(self):
+        if self.data is None:
+            buf = self.get_buffer()
+            match = r_phot.search(buf)
+            if match is None:
+                raise Exception('daophot PH output doesnt match regexp r_phot:'
+                                ' error (or regexp is wrong). Output buffer:\n ' + buf)
+            self.data = match.groups()
+        return self.data
+
+    def get_mag_limit(self):
+        return self.get_data()[0]
+
+    def get_mag_err(self):
+        return self.get_data()[1]
+
 

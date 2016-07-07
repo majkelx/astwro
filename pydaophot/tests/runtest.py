@@ -1,5 +1,5 @@
 from logging import *
-from pydaophot import daophot
+from pydaophot import daophot, fname
 import os
 
 basicConfig(level=INFO)
@@ -31,10 +31,12 @@ for i in range(10):
     dphot2.OPtion('FITTING', 5.5)
     dphot1.FInd(1,1)
     dphot2.FInd(1,1)
+    dphot1.PHotometry()
     dphot1.run()
     dphot2.run()
-    print dphot1.FInd_result.get_stras(), dphot2.OPtion_result.get_option('FI')
+    print dphot1.FInd_result.get_stras(), dphot1.PHotometry_result.get_mag_limit()
     dphot2.FInd_result.get_data()
+    dphot2.copy_from_working_dir(fname.STARS_FILE, '/tmp/dupa.coo')
 #    dphot.EXit(True)
     dphot1.close()
     dphot2.close()

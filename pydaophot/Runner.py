@@ -65,6 +65,13 @@ class Runner(object):
         except OSError:
             pass
 
+    def expand_default_file_path(self, path):
+        if path is None:
+            path = ''
+        else:
+            path = os.path.abspath(os.path.expanduser(path))
+        return path
+
     def run(self):
         try:
             process = sp.Popen([self.executable],
