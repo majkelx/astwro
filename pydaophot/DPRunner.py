@@ -13,6 +13,7 @@ class fname:
     IMAGE_FILE = 'i.fits'
     STARS_FILE = 'i.coo'
     PHOTOMETRY_FILE = 'i.ap'
+    PSF_STARS_FILE = 'i.lst'
 
 
 
@@ -24,6 +25,8 @@ class DPRunner(Runner):
     ATtach_result = None
     FInd_result = None
     PHotometry_result = None
+    PIck_result = None
+    PSf_result = None
 
     def __init__(self, config = None, daophotopt=None, photoopt=None):
         Runner.__init__(self, config)
@@ -125,3 +128,20 @@ class DPRunner(Runner):
         self.interact(commands, output_processor=processor)
         self.PHotometry_result = processor
         return processor
+
+    def PIck(self, number_of_stars_to_pick=50, faintest_mag=20, photometry_file=None, psf_stars_file=None):
+        if photometry_file is None:
+            self.rm_from_working_dir(fname.PSF_STARS_FILE)
+        photometry_file = self.expand_default_file_path(photometry_file)
+        psf_stars_file = self.expand_default_file_path(psf_stars_file)
+        commands = 'PICK\n{}\n{:d},{:d}\n{}\n'.format(
+            photometry_file,
+            number_of_stars_to_pick,
+            faintest_mag,
+            psf_stars_file
+        )
+        processor = DpOp_PIck()
+        self.interact(commands, output_processor=processor)
+        self.PIck_result = processor
+        return processor
+

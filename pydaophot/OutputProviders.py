@@ -108,6 +108,9 @@ r_find = re.compile(
 )
 #    for PHotometry
 r_phot = re.compile(r'Estimated magnitude limit \(Aperture 1\): +(-?\d+\.\d*) +\+- +(-?\d+\.\d*) +per star')
+#    for PIck
+r_pick = re.compile(r'(\d+) +suitable candidates')
+
 
 
 class DaophotCommandOutputProcessor(OutputBufferedProcessor):
@@ -203,4 +206,15 @@ class DpOp_PHotometry(DaophotCommandOutputProcessor):
     def get_mag_err(self):
         return self.get_data()[1]
 
+class DpOp_PIck(DaophotCommandOutputProcessor):
+    stars = None
+    def get_stars(self):
+        if self.stars is None:
+            buf = self.get_buffer()
+            match = r_pick.search(buf)
+            if match is None:
+                raise Exception('daophot PIck output doesnt match regexp r_pick:'
+                                ' error (or regexp is wrong). Output buffer:\n ' + buf)
+            self.stars = int(match.group(1))
+        return self.stars
 
