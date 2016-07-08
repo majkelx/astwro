@@ -33,13 +33,21 @@ class Runner(object):
     def close(self):
         self.on_exit()
 
+    def reset(self):
+        '''Resets runner without cleaning/changing working dir
+           allows execution of new sequence in same dir and files'''
+        self.process = None
+        self.stream_keeper.stream = None
+        self.output = None
+        self.output_processor_chain = self.stream_keeper
+
     def init_config_files(self, dir):
         pass
 
     def prepare_dir(self, dir=None, preserve_dir=False):
         if dir is None:
             dir = mkdtemp(prefix='pydaophot_tmp')
-            debug('Using temp dir %s', dir)
+            info('Using temp dir %s', dir)
             if not preserve_dir:
                 self.dir_is_tmp = True
         self.dir = dir

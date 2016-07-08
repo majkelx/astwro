@@ -27,9 +27,11 @@ fits = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'NGC6871.fits')
 
 start_time = time.time()
 
-for i in range(2):
+dphot1 = daophot()
+
+for i in range(0):
     info('###ITERATION %d' % i)
-    dphot1 = daophot()
+    dphot1.reset()
     dphot2 = daophot()
     dphot1.ATtach(fits)
     dphot2.ATtach(fits)
@@ -73,7 +75,7 @@ dphot.copy_from_working_dir(fname.PHOTOMETRY_FILE)
 dphot.copy_from_working_dir(fname.PSF_STARS_FILE)
 #dphot.copy_from_working_dir(fname.NEIGHBOURS_FILE)
 
-dphot.close()
+#dphot.close()
 
 elapsed_time = time.time() - start_time
 print 'Test completed in {:.3f} seconds'.format(elapsed_time)
