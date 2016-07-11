@@ -1,25 +1,13 @@
 import os
-from logging import *
-from .Runner import Runner
+from .DAORunner import DAORunner, fname
 from .config import get_package_config_path
 from .OutputProviders import *
 
 
-class fname:
-    ''' filenames in temp work dir '''
-    DAOPHOT_OPT = 'daophot.opt'
-    PHOTO_OPT = 'photo.opt'
-    APERTURES_FILE = PHOTO_OPT
-    IMAGE_FILE = 'i.fits'
-    STARS_FILE = 'i.coo'
-    PHOTOMETRY_FILE = 'i.ap'
-    PSF_STARS_FILE = 'i.lst'
-    NEIGHBOURS_FILE = 'i.nei'
-    PSF_FILE = 'i.psf'
 
 
-
-class DPRunner(Runner):
+class DPRunner(DAORunner):
+    """daophot runner"""
     daophotopt = None
     photoopt = None
     # output processors
@@ -30,55 +18,56 @@ class DPRunner(Runner):
     PIck_result = None
     PSf_result = None
 
-
-    def __init__(self, config = None, daophotopt=None, photoopt=None):
-        Runner.__init__(self, config)
+    def __init__(self, config=None, dir=None, daophotopt=None, photoopt=None):
         self.executable = os.path.expanduser(config.get('executables', 'daophot'))
         self.daophotopt = daophotopt if daophotopt is not None else os.path.join(get_package_config_path(), fname.DAOPHOT_OPT)
         self.photoopt   = photoopt   if photoopt   is not None else os.path.join(get_package_config_path(), fname.PHOTO_OPT)
-
+        DAORunner.__init__(self, config=config, dir=dir)
         self.OPtion_result = DPOP_OPtion()
-        self.interact('', output_processor=self.OPtion_result)
+        self._insert_processing_step('', output_processor=self.OPtion_result)
 
-    def on_exit(self):
+    def __deepcopy__(self, memo):
+        from copy import deepcopy
+        new = DAORunner.__deepcopy__(self, memo)
+        new.daophotopt = deepcopy(self.daophotopt, memo)
+        new.photoopt = deepcopy(self.photoopt, memo)
+        new.OPtion_result = deepcopy(self.OPtion_result, memo)
+        new.ATtach_result = deepcopy(self.ATtach_result, memo)
+        new.FInd_result = deepcopy(self.FInd_result, memo)
+        new.PHotometry_result = deepcopy(self.PHotometry_result, memo)
+        new.PIck_result = deepcopy(self.PIck_result, memo)
+        new.PSf_result = deepcopy(self.PSf_result, memo)
+        return new
+
+    def _on_exit(self):
         pass
 
-    def init_config_files(self, dir):
-        Runner.init_config_files(self, dir)
-        self.copy_to_working_dir(os.path.join(get_package_config_path(), fname.DAOPHOT_OPT))
-        self.copy_to_working_dir(os.path.join(get_package_config_path(), fname.PHOTO_OPT))
+    def reset(self):
+        DAORunner.reset(self)
+        self.ATtach_result = None
+        self.FInd_result = None
+        self.PHotometry_result = None
+        self.PIck_result = None
+        self.PSf_result = None
+        self.OPtion_result = DPOP_OPtion()
+        self._insert_processing_step('', output_processor=self.OPtion_result)
 
-    # daophot files managegement
-    def apertures_file_push(self, src_path):
-        self.copy_to_working_dir(src_path, fname.PHOTO_OPT)
-
-    def apertures_file_pull(self, dst_path = '.'):
-        self.copy_from_working_dir(fname.PHOTO_OPT, dst_path)
-
-    def apertures_file_create(self, apertures, IS, OS):
-        """Creates photo.opt in daophot working dir
-            :arg apertures -- list of apertures A1,A2... e.g. [6.0,8.0,12.0]
-            :arg IS -- inner radius of sky annulus
-            :arg OS -- outer radius of sky annulus
-            """
-        assert len(apertures) > 0 and len(apertures) < 13
-        self.rm_from_working_dir(fname.PHOTO_OPT)
-        with open(os.path.join(self.dir, fname.PHOTO_OPT), 'w') as f:
-            f.write(''.join('A{:1X}={:.2f}\n'.format(n+1, v) for n,v in zip(range(len(apertures)), apertures)))
-            f.write('IS={:.2f}'.format(IS))
-            f.write('OS={:.2f}'.format(OS))
+    def _init_workdir_files(self, dir):
+        DAORunner._init_workdir_files(self, dir)
+        self.copy_to_working_dir(self.daophotopt)
+        self.copy_to_working_dir(self.photoopt)
 
     # daophot commands
     def ATtach(self, image_file):
-#        self.link_to_working_dir(image_file, 'i.fits')
-        self.copy_to_working_dir(image_file, fname.IMAGE_FILE)
+        self.link_to_working_dir(image_file, 'i.fits')
+        # self.copy_to_working_dir(image_file, fname.IMAGE_FILE)
         processor = DPOP_ATtach()
-        self.interact('ATTACH\ni.fits\n', output_processor=processor)
+        self._insert_processing_step('ATTACH\ni.fits\n', output_processor=processor)
         self.ATtach_result = processor
         return processor
 
     def EXit(self):
-        self.interact('EXIT\n', output_processor=DaophotCommandOutputProcessor())
+        self._insert_processing_step('EXIT\n', output_processor=DaophotCommandOutputProcessor())
 
     def OPtion(self, options, value=None):
         """Set daophot option(s). options can be either:
@@ -106,17 +95,17 @@ class DPRunner(Runner):
             commands += ''.join('%s=%.2f\n' % (k,float(v)) for k,v in options)
             commands += '\n'
         processor = DPOP_OPtion()
-        self.interact(commands, output_processor=processor)
+        self._insert_processing_step(commands, output_processor=processor)
         self.OPtion_result = processor
         return processor
 
-    def FInd(self, frames_av = 1, frames_sum = 1, starlist_file=fname.STARS_FILE):
+    def FInd(self, frames_av = 1, frames_sum = 1, starlist_file=fname.FOUNDSTARS_FILE):
         if self.ATtach_result is None:
             raise Exception('No imput file attached, call ATttache first.')
         self.rm_from_working_dir(starlist_file)
         commands = 'FIND\n{},{}\n{}\nyes\n'.format(frames_av, frames_sum, starlist_file)
         processor = DpOp_FInd()
-        self.interact(commands, output_processor=processor)
+        self._insert_processing_step(commands, output_processor=processor)
         self.FInd_result = processor
         return processor
 
@@ -128,7 +117,7 @@ class DPRunner(Runner):
         photometry_file = self.expand_default_file_path(photometry_file)
         commands='PHOT\n{}\n\n{}\n{}\n'.format(photoopt, stars_file, photometry_file)
         processor = DpOp_PHotometry()
-        self.interact(commands, output_processor=processor)
+        self._insert_processing_step(commands, output_processor=processor)
         self.PHotometry_result = processor
         return processor
 
@@ -144,7 +133,7 @@ class DPRunner(Runner):
             psf_stars_file
         )
         processor = DpOp_PIck()
-        self.interact(commands, output_processor=processor)
+        self._insert_processing_step(commands, output_processor=processor)
         self.PIck_result = processor
         return processor
 
@@ -160,7 +149,7 @@ class DPRunner(Runner):
             psf_file
         )
         processor = DpOp_PSf()
-        self.interact(commands, output_processor=processor)
+        self._insert_processing_step(commands, output_processor=processor)
         self.PSf_result = processor
         return processor
 

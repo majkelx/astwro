@@ -4,7 +4,7 @@ from logging import *
 
 class AbstractOutputProvider(object):
     """ Abstract class (interface) for chained stream processing """
-    def get_output_stream(self):
+    def _get_output_stream(self):
         """To be overridden"""
         pass
 
@@ -18,7 +18,7 @@ class StreamKeeper(AbstractOutputProvider):
         self.stream = stream
         self.runner = runner
 
-    def get_output_stream(self):
+    def _get_output_stream(self):
         self.runner.wait_for_results()
         if self.stream is None:
             raise Exception('No output stream available, call run() before collecting results.')
@@ -30,54 +30,56 @@ class OutputProvider(AbstractOutputProvider):
         also can be used as dummy processor in chain"""
 
     # previous output provider
-    prev_in_chain = None
-    stream = None
+    _prev_in_chain = None
+    __stream = None
 
     def __init__(self, prev_in_chain=None):
-        self.prev_in_chain = prev_in_chain
+        self._prev_in_chain = prev_in_chain
 
-    def consume(self):
-        """ to be overridden """
+    def _consume(self, stream):
+        """ to be overridden
+        :param stream:
+        """
         pass
 
-    def get_output_stream(self):
-        if self.stream is None:
-            self.stream = self.prev_in_chain.get_output_stream()
-            self.consume()
-        return self.stream
+    def _get_output_stream(self):
+        if self.__stream is None:
+            self.__stream = self._prev_in_chain._get_output_stream()
+            self._consume(self.__stream)
+        return self.__stream
 
 
 class OutputLinesProcessor(OutputProvider):
     """ Base for line-by-line processing"""
 
-    def process_line(self, line, counter):
+    def _process_line(self, line, counter):
         """ processes line by line output
             return True if it's last line.
             To be overridden """
         return True
 
-    def consume(self):
+    def _consume(self, stream):
         counter = 0
-        for line in self.stream:
+        for line in stream:
             counter += 1
             debug("Output line %3d: %s", counter, line)
-            last_one = self.process_line(line, counter)
+            last_one = self._process_line(line, counter)
             if last_one:
                 debug("Was last line")
                 return
 
 
 class OutputBufferedProcessor(OutputLinesProcessor):
-    buffer = ''
+    __buffer = ''
 
-    def process_line(self, line, counter):
+    def _process_line(self, line, counter):
         """ processes line-by-line output
             return True if it's last line.
             If overridden, this base impl should be called """
-        self.buffer += line
-        return self.is_last_one(line, counter)
+        self.__buffer += line
+        return self._is_last_one(line, counter)
 
-    def is_last_one(self, line, counter):
+    def _is_last_one(self, line, counter):
         """ return True if it's last line.
             To be overridden """
 
@@ -90,9 +92,9 @@ class OutputBufferedProcessor(OutputLinesProcessor):
             To be overridden """
 
     def get_buffer(self):
-        self.get_output_stream()  # tigers processing
-        debug("Buffer of output obtained: "+self.buffer)
-        return self.buffer
+        self._get_output_stream()  # tigers processing
+        debug("Buffer of output obtained: " + self.__buffer)
+        return self.__buffer
 
 # Daophot regexps:
 #     for 'Command:' like
@@ -117,11 +119,14 @@ r_pick = re.compile(r'(\d+) +suitable candidates')
 r_psf = re.compile(r'Chi    Parameters...\n>* +(-?\d+\.\d*) +(-?\d+\.\d*) +(-?\d+\.\d*)')
 r_psf_errors = re.compile(r' (\d+) +(\d+.\d+) [ ?*]')
 
-
+# Allstar regexp
+r_alls_separator = re.compile(r'Input image name:')
+r_alls_opt = r_opt
+r_alls = re.compile(r'(\d+) +(\d+) +(\d+) +(\d+) *\n')
 
 class DaophotCommandOutputProcessor(OutputBufferedProcessor):
 
-    def is_last_one(self, line, counter):
+    def _is_last_one(self, line, counter):
         return r_command.search(line) is not None
 
 class DPOP_ATtach(DaophotCommandOutputProcessor):
@@ -139,18 +144,18 @@ class DPOP_ATtach(DaophotCommandOutputProcessor):
 
 
 class DPOP_OPtion(DaophotCommandOutputProcessor):
-    options = None
+    __options = None
     def get_options(self):
         """returns dictionary of options: XX: 'nnn.dd'
            keys are two letter option names
            values are strings"""
-        if self.options is None:
+        if self.__options is None:
             buf = self.get_buffer()
             match = dict(r_opt.findall(buf))
             if 'RE' not in match:  # RE not found - sth wrong, found, suppose is OK
                 raise Exception('daophot failed to present options. Output buffer:\n ' + buf)
-            self.options = match
-        return self.options
+            self.__options = match
+        return self.__options
 
     def get_option(self, key):
         return float(self.get_options()[key[:2].upper()])
@@ -159,16 +164,16 @@ class DPOP_OPtion(DaophotCommandOutputProcessor):
         self.get_options()
 
 class DpOp_FInd(DaophotCommandOutputProcessor):
-    data = None
+    __data = None
     def get_data(self):
-        if self.data is None:
+        if self.__data is None:
             buf = self.get_buffer()
             match = r_find.search(buf)
             if match is None:
                 raise Exception('daophot find output doesnt match regexp r_find:'
                                 ' error (or regexp is wrong). Output buffer:\n ' + buf)
-            self.data = match.groups()
-        return self.data
+            self.__data = match.groups()
+        return self.__data
 
     def get_sky(self):
         return float(self.get_data()[0])
@@ -197,16 +202,16 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
         return self.get_data()[7]
 
 class DpOp_PHotometry(DaophotCommandOutputProcessor):
-    data = None
+    __data = None
     def get_data(self):
-        if self.data is None:
+        if self.__data is None:
             buf = self.get_buffer()
             match = r_phot.search(buf)
             if match is None:
                 raise Exception('daophot PH output doesnt match regexp r_phot:'
                                 ' error (or regexp is wrong). Output buffer:\n ' + buf)
-            self.data = match.groups()
-        return self.data
+            self.__data = match.groups()
+        return self.__data
 
     def get_mag_limit(self):
         return float(self.get_data()[0])
@@ -215,38 +220,38 @@ class DpOp_PHotometry(DaophotCommandOutputProcessor):
         return float(self.get_data()[1])
 
 class DpOp_PIck(DaophotCommandOutputProcessor):
-    stars = None
+    __stars = None
     def get_stars(self):
-        if self.stars is None:
+        if self.__stars is None:
             buf = self.get_buffer()
             match = r_pick.search(buf)
             if match is None:
                 raise Exception('daophot PIck output doesnt match regexp r_pick:'
                                 ' error (or regexp is wrong). Output buffer:\n ' + buf)
-            self.stars = int(match.group(1))
-        return self.stars
+            self.__stars = int(match.group(1))
+        return self.__stars
 
 
 class DpOp_PSf(DaophotCommandOutputProcessor):
-    data = None
-    errors = None
+    __data = None
+    __errors = None
 
     def get_errors(self):
-        if self.errors is None:
+        if self.__errors is None:
             buf = self.get_buffer()
-            self.errors = [(int(star), float(err)) for star, err in r_psf_errors.findall(buf)]
-        return self.errors
+            self.__errors = [(int(star), float(err)) for star, err in r_psf_errors.findall(buf)]
+        return self.__errors
 
 
     def get_data(self):
-        if self.data is None:
+        if self.__data is None:
             buf = self.get_buffer()
             match = r_psf.search(buf)
             if match is None:
                 raise Exception('daophot PSF output doesnt match regexp r_psf:'
                                 ' error (or regexp is wrong). Output buffer:\n ' + buf)
-            self.data = match.groups()
-        return self.data
+            self.__data = match.groups()
+        return self.__data
 
     def get_chi(self):
         return float(self.get_data()[0])
@@ -254,4 +259,39 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
     def get_hwhm_xy(self):
         return float(self.get_data()[1]), float(self.get_data()[2])
 
+class AsOp_opt(OutputBufferedProcessor):
+    __options = None
 
+    def _is_last_one(self, line, counter):
+        return r_alls_separator.search(line) is not None
+
+    def get_options(self):
+        """returns dictionary of options: XX: 'nnn.dd'
+           keys are two letter option names
+           values are strings"""
+        if self.__options is None:
+            buf = self.get_buffer()
+            match = dict(r_opt.findall(buf))
+            if 'WA' not in match:  # WA not found - sth wrong, found, suppose is OK
+                raise Exception('allstar failed to present options. Output buffer:\n ' + buf)
+            self.__options = match
+        return self.__options
+
+    def get_option(self, key):
+        return float(self.get_options()[key[:2].upper()])
+
+    def raise_if_error(self, line):
+        self.get_options()
+
+class AsOp_result(OutputBufferedProcessor):
+    __stars = None
+    def _is_last_one(self, line, counter):
+        return False
+
+    def get_stars_no(self):
+        """returns tuple: (disappeared_stars, converged_stars)"""
+        if self.__stars is None:
+            buf = self.get_buffer()
+            match = r_alls.search(buf)
+            self.__stars = match.group(3), match.group(4)
+        return self.__stars
