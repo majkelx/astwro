@@ -100,7 +100,7 @@ Example
     # print result chi values. Each command has own results object e.g. PSf_result
     # which gives access to all command output data
     for dp in dphots:
-        print "PSF radius = {} gives chi = {}".format(dp.OPtion_result.get_option('PSF'), dp.PSf_result.get_chi())
+        print "PSF radius = {} gives chi = {}".format(dp.OPtion_result.get_option('PSF'), dp.PSf_result.chi)
 
     # now prepare allstar runners, one for each daophot. By providing ``dir`` parameter, allstars will use
     # daophot's working dirs.

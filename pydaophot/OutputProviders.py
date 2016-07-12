@@ -131,7 +131,8 @@ class DaophotCommandOutputProcessor(OutputBufferedProcessor):
 
 class DPOP_ATtach(DaophotCommandOutputProcessor):
 
-    def get_picture_size(self):
+    @property
+    def picture_size(self):
         """returns tuple with (x,y) size of pic returned by 'attach' """
         buf = self.get_buffer()
         match = r_pic_size.search(buf)
@@ -140,12 +141,14 @@ class DPOP_ATtach(DaophotCommandOutputProcessor):
         return int(match.group(1)), int(match.group(2))
 
     def raise_if_error(self, line):
-        self.get_picture_size()
+        _ = self.picture_size
 
 
 class DPOP_OPtion(DaophotCommandOutputProcessor):
     __options = None
-    def get_options(self):
+
+    @property
+    def options(self):
         """returns dictionary of options: XX: 'nnn.dd'
            keys are two letter option names
            values are strings"""
@@ -158,14 +161,16 @@ class DPOP_OPtion(DaophotCommandOutputProcessor):
         return self.__options
 
     def get_option(self, key):
-        return float(self.get_options()[key[:2].upper()])
+        return float(self.options[key[:2].upper()])
 
     def raise_if_error(self, line):
-        self.get_options()
+        _ = self.options
 
 class DpOp_FInd(DaophotCommandOutputProcessor):
     __data = None
-    def get_data(self):
+
+    @property
+    def data(self):
         if self.__data is None:
             buf = self.get_buffer()
             match = r_find.search(buf)
@@ -175,35 +180,44 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
             self.__data = match.groups()
         return self.__data
 
-    def get_sky(self):
-        return float(self.get_data()[0])
+    @property
+    def sky(self):
+        return float(self.data[0])
 
-    def get_stddev(self):
-        return float(self.get_data()[1])
+    @property
+    def stddev(self):
+        return float(self.data[1])
 
-    def get_mean(self):
-        return float(self.get_data()[2])
+    @property
+    def mean(self):
+        return float(self.data[2])
 
-    def get_median(self):
-        return float(self.get_data()[3])
+    @property
+    def median(self):
+        return float(self.data[3])
 
-    def get_pixels(self):
-        t = self.get_data()[4]
+    @property
+    def pixels(self):
+        t = self.data[4]
         if t is None or t == '':
             t = 0
         else:
             t = int(t) * 1000
-        return int(self.get_data()[5]) + t
+        return int(self.data()[5]) + t
 
-    def get_err(self):
-        return self.get_data()[6]
+    @property
+    def err(self):
+        return self.data[6]
 
-    def get_stars(self):
-        return self.get_data()[7]
+    @property
+    def stars(self):
+        return self.data[7]
 
 class DpOp_PHotometry(DaophotCommandOutputProcessor):
     __data = None
-    def get_data(self):
+
+    @property
+    def data(self):
         if self.__data is None:
             buf = self.get_buffer()
             match = r_phot.search(buf)
@@ -213,15 +227,19 @@ class DpOp_PHotometry(DaophotCommandOutputProcessor):
             self.__data = match.groups()
         return self.__data
 
-    def get_mag_limit(self):
-        return float(self.get_data()[0])
+    @property
+    def mag_limit(self):
+        return float(self.data[0])
 
-    def get_mag_err(self):
-        return float(self.get_data()[1])
+    @property
+    def mag_err(self):
+        return float(self.data[1])
 
 class DpOp_PIck(DaophotCommandOutputProcessor):
     __stars = None
-    def get_stars(self):
+
+    @property
+    def stars(self):
         if self.__stars is None:
             buf = self.get_buffer()
             match = r_pick.search(buf)
@@ -236,14 +254,15 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
     __data = None
     __errors = None
 
-    def get_errors(self):
+    @property
+    def errors(self):
         if self.__errors is None:
             buf = self.get_buffer()
             self.__errors = [(int(star), float(err)) for star, err in r_psf_errors.findall(buf)]
         return self.__errors
 
-
-    def get_data(self):
+    @property
+    def data(self):
         if self.__data is None:
             buf = self.get_buffer()
             match = r_psf.search(buf)
@@ -253,11 +272,13 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
             self.__data = match.groups()
         return self.__data
 
-    def get_chi(self):
-        return float(self.get_data()[0])
+    @property
+    def chi(self):
+        return float(self.data[0])
 
-    def get_hwhm_xy(self):
-        return float(self.get_data()[1]), float(self.get_data()[2])
+    @property
+    def hwhm_xy(self):
+        return float(self.data[1]), float(self.data[2])
 
 class AsOp_opt(OutputBufferedProcessor):
     __options = None
@@ -265,7 +286,8 @@ class AsOp_opt(OutputBufferedProcessor):
     def _is_last_one(self, line, counter):
         return r_alls_separator.search(line) is not None
 
-    def get_options(self):
+    @property
+    def options(self):
         """returns dictionary of options: XX: 'nnn.dd'
            keys are two letter option names
            values are strings"""
@@ -278,17 +300,18 @@ class AsOp_opt(OutputBufferedProcessor):
         return self.__options
 
     def get_option(self, key):
-        return float(self.get_options()[key[:2].upper()])
+        return float(self.options[key[:2].upper()])
 
     def raise_if_error(self, line):
-        self.get_options()
+        _ = self.options
 
 class AsOp_result(OutputBufferedProcessor):
     __stars = None
     def _is_last_one(self, line, counter):
         return False
 
-    def get_stars_no(self):
+    @property
+    def stars_no(self):
         """returns tuple: (disappeared_stars, converged_stars)"""
         if self.__stars is None:
             buf = self.get_buffer()
