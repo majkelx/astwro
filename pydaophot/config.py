@@ -26,5 +26,6 @@ def parse_config_files(files=None, parse_default_locations=True):
 
 
 def create_config_file(filename='.'):
+    """Creates sample config file (with default values)"""
     shutil.copy(os.path.join(get_package_config_path(), 'pydaophot.cfg'), filename)
 

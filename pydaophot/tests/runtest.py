@@ -3,9 +3,6 @@ from pydaophot import daophot, allstar, fname
 import os
 import time
 
-with daophot() as dp:
-    print dp.dir
-    dp.close()
 
 
 # basicConfig(level=INFO)
@@ -58,16 +55,16 @@ for i in range(0):
     dphot2.close()
 
 ## ONE
-dphot = daophot()
-dphot.ATtach(fits)
-dphot.FInd(1,1)
-dphot.PHotometry()
-dphot.PIck()
+d = daophot()
+d.ATtach(fits)
+d.FInd(1, 1)
+d.PHotometry()
+d.PIck()
 
 # Make copies to perform (parallel) PSF step with different parameters.
 # Each gets another option of PSF RADIUS and PSF step
 psf_radius = [14,16,18,20,22,24]
-dphots = [dphot.clone() for _ in psf_radius]
+dphots = [d.clone() for _ in psf_radius]
 for dp, ps in zip(dphots, psf_radius):
     dp.OPtion('PSF', ps)
     dp.PSf()
