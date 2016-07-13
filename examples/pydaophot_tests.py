@@ -72,6 +72,9 @@ for als, ps in zip(allstars, psf_radius):
     als.wait_for_results()  # file operations doesnt wait for completion (as ..._result.get_XXX do)
     als.link_from_working_dir(fname.SUBTRACTED_IMAGE_FILE, "i-psf-{}.sub.fits".format(ps))
 
+# get some files from last one
+#als.
+
 # close them
 for dp in dphots:
     dp.close()

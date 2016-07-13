@@ -18,13 +18,15 @@ class DPRunner(DAORunner):
     PIck_result = None
     PSf_result = None
 
-    def __init__(self, config=None, dir=None, daophotopt=None, photoopt=None):
+    def __init__(self, config=None, dir=None, daophotopt=None, photoopt=None, image=None):
         self.executable = os.path.expanduser(config.get('executables', 'daophot'))
         self.daophotopt = daophotopt if daophotopt is not None else os.path.join(get_package_config_path(), fname.DAOPHOT_OPT)
         self.photoopt   = photoopt   if photoopt   is not None else os.path.join(get_package_config_path(), fname.PHOTO_OPT)
         DAORunner.__init__(self, config=config, dir=dir)
         self.OPtion_result = DPOP_OPtion()
         self._insert_processing_step('', output_processor=self.OPtion_result)
+        if image:
+            self.ATtach(image)
 
     def __deepcopy__(self, memo):
         from copy import deepcopy
