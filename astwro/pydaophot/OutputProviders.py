@@ -257,7 +257,7 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
     @property
     def errors(self):
         if self.__errors is None:
-            buf = self.get_buffer()
+            buf = self.get_buffer()  # TODO: implement 'saturated'
             self.__errors = [(int(star), float(err)) for star, err in r_psf_errors.findall(buf)]
         return self.__errors
 

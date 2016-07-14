@@ -1,4 +1,7 @@
-import ConfigParser
+try:
+    from ConfigParser import ConfigParser # python 2
+except ImportError:
+    from configparser import ConfigParser # python3
 import os, shutil
 
 def get_package_config_path():
@@ -20,7 +23,7 @@ def parse_config_files(files=None, parse_default_locations=True):
         files = []
     if parse_default_locations:
         files = std_config_files + files
-    config = ConfigParser.ConfigParser()
+    config = ConfigParser()
     config.read(files)
     return config
 

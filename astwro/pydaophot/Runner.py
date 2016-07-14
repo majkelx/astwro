@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 from copy import deepcopy
 try:
@@ -6,6 +7,10 @@ try:
 except ImportError:
     from io import StringIO # python3
 import subprocess as sp
+try:
+    from subprocess import TimeoutExpired  # python 3 only
+except ImportError:
+    pass
 from logging import *
 from .OutputProviders import StreamKeeper, OutputProvider
 from astwro.tmpdir import tmpdir, TmpDir
@@ -101,6 +106,9 @@ class Runner(object):
     def link_to_working_dir(self, source, link_filename=None):
         """Creates symlink in runner's working dir under name filename or the same
         as original if filename is None. Overwrites existing file."""
+        source = self.expand_default_file_path(source)
+        if not os.path.isfile(source):
+            raise IOError('Source file {} not found'.format(source))
         if link_filename is None:
             link_filename = os.path.basename(source)
         dest = os.path.join(self.dir.path, link_filename)
@@ -168,7 +176,13 @@ class Runner(object):
         if wait:
             self.__communicate(self.__commands)
         else:
-            self.__process.stdin.write(self.__commands)
+            if sys.version_info[0] > 2: # python 3 has timeout in communicate
+                try:
+                    self.__communicate(self.__commands, timeout=0.01)
+                except TimeoutExpired:
+                    pass
+            else: # python 2 - write directly to stdin
+                self.__process.stdin.write(self.__commands)
 
     def wait_for_results (self):
         if self.output is None:
@@ -176,8 +190,11 @@ class Runner(object):
                 raise Exception('Call run() before asking for results.')
             self.__communicate()
 
-    def __communicate(self, input=None):
-        self.output, self.stderr = self.__process.communicate(input)
+    def __communicate(self, input=None, timeout=None):
+        i = input.encode(encoding='ascii') if input else None
+        o, e = self.__process.communicate(i, timeout=timeout) if timeout else self.__process.communicate(i)
+        self.output = o.decode('ascii')
+        self.stderr = e.decode('ascii')
         info('STDOUT:\n' + self.output)
         self.__stream_keeper.stream = StringIO(self.output)
 
