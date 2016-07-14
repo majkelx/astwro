@@ -1,7 +1,6 @@
 import os
 import shutil
 from copy import deepcopy
-from tempfile import mkdtemp
 try:
     from StringIO import StringIO  # python2
 except ImportError:
@@ -9,13 +8,13 @@ except ImportError:
 import subprocess as sp
 from logging import *
 from .OutputProviders import StreamKeeper, OutputProvider
+from astwro.tmpdir import tmpdir, TmpDir
 
 
 class Runner(object):
 
     executable = None
     dir = None
-    dir_is_tmp = False
     output = None
     stderr = None
     __cfg = None
@@ -26,6 +25,10 @@ class Runner(object):
     __stream_keeper = None
 
     def __init__(self, config=None, dir=None):
+        """
+        :param config:ConfigParser
+        :param dir: path name or TmpDir object, in not provided new temp dir will be used
+        """
         self.__cfg = config
         self.__stream_keeper = StreamKeeper(runner=self)
         self.__output_processor_chain = self.__stream_keeper
@@ -49,13 +52,7 @@ class Runner(object):
         new.output = self.output
         new.stderr = self.stderr
         new.__commands = self.__commands
-        new.dir_is_tmp = self.dir_is_tmp
-        if self.dir_is_tmp:
-            new._prepare_dir(init_files=False)
-            shutil.rmtree(new.dir)
-            shutil.copytree(self.dir, new.dir, symlinks=True)
-        else:
-            new.dir = self.dir
+        new.dir = deepcopy(self.dir, memo)
         new.__output_processor_chain = deepcopy(self.__output_processor_chain, memo)
         new.__stream_keeper = memo[id(self.__stream_keeper)]
         return new
@@ -67,13 +64,9 @@ class Runner(object):
         return deepcopy(self)
 
     def close(self):
-        """Cleans things up. Deletes working dir with all content."""
+        """Cleans things up."""
         self._on_exit()
-        if self.dir_is_tmp:
-            try:
-                shutil.rmtree(self.dir)
-            except OSError:
-                pass
+        self.dir = None
 
 
     def reset(self):
@@ -87,12 +80,14 @@ class Runner(object):
     def _init_workdir_files(self, dir):
         pass
 
-    def _prepare_dir(self, dir=None, preserve_dir=False, init_files=True):
+    def _prepare_dir(self, dir=None, init_files=True):
         if dir is None:
-            dir = mkdtemp(prefix='pydaophot_tmp')
+            dir = tmpdir(prefix='pydaophot_tmp')
             info('Using temp dir %s', dir)
-            if not preserve_dir:
-                self.dir_is_tmp = True
+        elif isinstance(dir, str):
+            dir = tmpdir(path=dir)
+        elif not isinstance(dir, TmpDir):
+            raise TypeError('dir must be either: TmpDir, str, None')
         self.dir = dir
         if init_files:
             self._init_workdir_files(dir)
@@ -100,7 +95,7 @@ class Runner(object):
     def copy_to_working_dir(self, source, filename=None):
         """Copies source file to runner's working dir under name filename or the same
         as original if filename is None. Overwrites existing file."""
-        dst = self.dir if filename is None else os.path.join(self.dir, filename)
+        dst = self.dir.path if filename is None else os.path.join(self.dir.path, filename)
         shutil.copy(source, dst)
 
     def link_to_working_dir(self, source, link_filename=None):
@@ -108,7 +103,7 @@ class Runner(object):
         as original if filename is None. Overwrites existing file."""
         if link_filename is None:
             link_filename = os.path.basename(source)
-        dest = os.path.join(self.dir, link_filename)
+        dest = os.path.join(self.dir.path, link_filename)
         try:
             os.remove(dest)
         except OSError:
@@ -117,7 +112,7 @@ class Runner(object):
 
     def copy_from_working_dir(self, filename, dest='./'):
         """Copies file: filename from runner's working dir. Overwrites existing file."""
-        shutil.copy(os.path.join(self.dir, filename), dest)
+        shutil.copy(os.path.join(self.dir.path, filename), dest)
 
     def link_from_working_dir(self, filename, dest='./'):
         """Creates symlink in dest of file from runner's working dir.
@@ -129,20 +124,20 @@ class Runner(object):
             os.remove(dest)
         except OSError:
             pass
-        os.symlink(os.path.join(self.dir, filename), dest)
+        os.symlink(os.path.join(self.dir.path, filename), dest)
 
     def file_from_working_dir(self, filename):
         """Simply adds working dir path into filename"""
-        return os.path.join(self.dir, filename)
+        return os.path.join(self.dir.path, filename)
 
     def exists_in_working_dir(self, filename):
         """Checks for filename existence in runner's working dir"""
-        return os.path.exists(os.path.join(self.dir, filename))
+        return os.path.exists(os.path.join(self.dir.path, filename))
 
     def rm_from_working_dir(self, filename):
         """Removes (if exists) file filename from runner's working dir"""
         try:
-            os.remove(os.path.join(self.dir, filename))
+            os.remove(os.path.join(self.dir.path, filename))
         except OSError:
             pass
 
@@ -165,7 +160,7 @@ class Runner(object):
                                       stdin=sp.PIPE,
                                       stdout=sp.PIPE,
                                       stderr=sp.PIPE,
-                                      cwd=self.dir)
+                                      cwd=self.dir.path)
         except OSError as e:
             error('Check if executable: %s is in PATH, modify executable name/path in pydaophot.cfg', self.executable)
             raise e

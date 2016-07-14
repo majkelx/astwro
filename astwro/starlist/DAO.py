@@ -72,7 +72,7 @@ def write_file(starlist, file, dao_type):
 
 def _determine_columns(file, dao_type):
     if not dao_type:
-        if not issubclass(file, str):
+        if not isinstance(file, str):
             raise TypeError('File must be filename or dao_type must be specified')
         import os
         dao_type = DAO.extensions[os.path.splitext(file)[1]]

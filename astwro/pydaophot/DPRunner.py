@@ -4,8 +4,6 @@ from .config import get_package_config_path
 from .OutputProviders import *
 
 
-
-
 class DPRunner(DAORunner):
     """daophot runner"""
     daophotopt = None
@@ -19,6 +17,15 @@ class DPRunner(DAORunner):
     PSf_result = None
 
     def __init__(self, config=None, dir=None, daophotopt=None, photoopt=None, image=None):
+        """
+        :param dir:         pathname or TmpDir object - working directory for daophot,
+                            if None temp dir will be used and deleted on DPRunner.close()
+        :param daophotopt:  daophot.opt file, if None build in default file will be used, can be added later
+                            by DPRunner.copy_to_working_dir(file, fname.DAOPHOT_OPT)
+        :param photoopt:    photo.opt file, if None build in default file will be used, can be added later
+                            by DPRunner.copy_to_working_dir(file, fname.PHOTO_OPT)
+        :param image_file   if provided this file will be automatically attached (AT) as first daophot command
+        """
         self.executable = os.path.expanduser(config.get('executables', 'daophot'))
         self.daophotopt = daophotopt if daophotopt is not None else os.path.join(get_package_config_path(), fname.DAOPHOT_OPT)
         self.photoopt   = photoopt   if photoopt   is not None else os.path.join(get_package_config_path(), fname.PHOTO_OPT)
