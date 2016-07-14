@@ -8,15 +8,15 @@ class DAO:
     PHOTOMETRY_FILE = AP_FILE = 2
     PSF_STARS_FILE = LST_FILE = 3
     NEIGHBOURS_FILE = NEI_FILE = 4
-    ALLSTARS_FILE = ALS_FILE = 5
+    ALLSTARS_FILE = ALS_FILE = PK_FILE = NST_FILE = 5
 
     columns = [
         ['id'],
-        ['id', 'x', 'y', 'rel_mag', 'sharp', 'round', 'round_marg'],
+        ['id', 'x', 'y', 'mag_rel_treshold', 'sharp', 'round', 'round_marg'],
         [],
         ['id', 'x', 'y', 'mag1', 'err1', 'tmp'],
         [],
-        [],
+        ['id', 'x', 'y', 'mag_rel_psf', 'mag_rel_psf_err', 'sky', 'psf_iter', 'psf_chi', 'psf_sharp'],
     ]
 
     formats = {
@@ -112,10 +112,13 @@ def _write_header(hdr, file):
 def _write_table(starlist, file, columns):
     for i, row in starlist.iterrows():
         for col in columns:
+            val = row.get(col)
+            if not val: # not all columns exist in StarList, do not write rest of them
+                break
             fmt = DAO.formats.get(col)
             if not fmt:
                 fmt = '{:9.3f}'
-            file.write(fmt.format(row[col]))
+            file.write(fmt.format(val))
         file.write('\n')
 
 

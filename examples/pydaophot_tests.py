@@ -48,7 +48,7 @@ d.PIck()
 
 # Make copies to perform (parallel) PSF step with different parameters.
 # Each gets another option of PSF RADIUS and PSF step
-psf_radius = [14,16,18,20,22,24]
+psf_radius = [18,20,22,24]
 dphots = [d.clone() for _ in psf_radius]
 for dp, ps in zip(dphots, psf_radius):
     dp.OPtion('PSF', ps)
@@ -64,13 +64,19 @@ for dp in dphots:
     print ("PSF radius = {} gives chi = {}".format(dp.OPtion_result.get_option('PSF'), dp.PSf_result.chi))
 
 # perform allstar in parallel
-allstars = [allstar(dp.dir, create_subtracted_image=True) for dp in dphots]
+start_time = time.time()
+
+create_subtracted = False
+allstars = [allstar(dp.dir, create_subtracted_image=create_subtracted) for dp in dphots]
 for als in allstars:
     als.run(wait=False)
 # copy subtracted files to current dir with names corresponding to PSF RADIUS parameter
 for als, ps in zip(allstars, psf_radius):
     als.wait_for_results()  # file operations doesnt wait for completion (as ..._result.get_XXX do)
-    als.link_from_working_dir(fname.SUBTRACTED_IMAGE_FILE, "i-psf-{}.sub.fits".format(ps))
+    if create_subtracted:
+        als.link_from_working_dir(fname.SUBTRACTED_IMAGE_FILE, "i-psf-{}.sub.fits".format(ps))
+    else:
+        als.copy_from_working_dir(fname.ALS_FILE, "i-psf-{}.als".format(ps))
 
 # get some files from last one
 #als.
