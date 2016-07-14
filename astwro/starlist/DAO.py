@@ -14,13 +14,13 @@ class DAO:
         ['id'],
         ['id', 'x', 'y', 'rel_mag', 'sharp', 'round', 'round_marg'],
         [],
-        ['id', 'x', 'y', 'mag1', 'err1'],
+        ['id', 'x', 'y', 'mag1', 'err1', 'tmp'],
         [],
         [],
     ]
 
     formats = {
-        'id': '{:7d}',
+        'id': '{:7.0f}',
     }
 
 DAO.extensions = {
@@ -53,7 +53,7 @@ def starlist_from_file(file, dao_type = None):
     return _parse_file(file, _determine_columns(file, dao_type))
 
 
-def write_file(starlist, file, dao_type):
+def write_file(starlist, file, dao_type=None):
     """
     Write StarList object into daophot  file.
     :param starlist: StarList instance to be writen
@@ -92,18 +92,17 @@ def _write_header(hdr, file):
         return
     first_line = ''
     second_line = ''
-    second_line_frmt = ['{:3d}', '{:6d}', '{:6d}', '{:8.1f}', '{:8.1f}', '{:8.2f}',
+    second_line_frmt = ['{:3.0f}', '{:6.0f}', '{:6.0f}', '{:8.1f}', '{:8.1f}', '{:8.2f}',
                         '{:8.2f}', '{:8.2f}', '{:8.2f}', '{:8.2f}']
     second_line_frmt.reverse()
     try:
         for token in DAO_file_firstline.split(' '):
-            if token == '':
-                first_line += ' '
-            else:
+            if token != '':
                 val = hdr[token]
                 first_line += token
                 fmt = second_line_frmt.pop()
                 second_line += fmt.format(float(val))
+            first_line += ' '
     except KeyError:
         # sometimes header is shorter, it's OK'
         pass
@@ -111,9 +110,11 @@ def _write_header(hdr, file):
 
 
 def _write_table(starlist, file, columns):
-    for row in starlist.iterrows():
+    for i, row in starlist.iterrows():
         for col in columns:
-            fmt = DAO.formats.get(col, default='{:9.3f}')
+            fmt = DAO.formats.get(col)
+            if not fmt:
+                fmt = '{:9.3f}'
             file.write(fmt.format(row[col]))
         file.write('\n')
 
@@ -139,7 +140,8 @@ def _parse_header(file):
 
 
 def _parse_table(f, hdr):
-    return StarList(pd.read_table(f, names=hdr, sep='\s+', na_values='-9.999'))
+    df = pd.read_table(f, names=hdr, sep='\s+', na_values='-9.999', index_col=False)
+    return StarList(df)
 
 
 def _get_stream(file, mode):
