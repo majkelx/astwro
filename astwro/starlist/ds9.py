@@ -8,7 +8,8 @@ _ds9_regexp = re.compile(r'[+-]? *circle[( ] *([+-]?\d+[.]?\d*) *[, ] *([+-]?\d+
 
 def read_ds9_regions(filename):
     with open(filename, 'rt') as f:
-        s = StarList.new()
+        # s = StarList.new()
+        data = []
         dao_hdr1 = None
         hdr = None
         for line in f:
@@ -21,8 +22,12 @@ def read_ds9_regions(filename):
             else:
                 m = _ds9_regexp.search(line)
                 if m is not None:  # s[id] = (id, x, y)
-                    s.loc[int(m.group(3))] = (int(m.group(3)), float(m.group(1)), float(m.group(2)))
+                    # very slow! TODO: some append or sth
+                    # s.loc[int(m.group(3))] = (int(m.group(3)), float(m.group(1)), float(m.group(2)))
+                    data.append([int(m.group(3)), float(m.group(1)), float(m.group(2))])
             dao_hdr1 = None
+    s = StarList(data, columns = ['id', 'x', 'y'])
+    s.index = s['id']
     s.DAO_hdr = hdr
     return s
 
@@ -61,7 +66,7 @@ def write_ds9_regions(starlist, filename,
     objects present in index psf will be red and labeled with prefix PSF:
     objects present in index faint will be disabled by '-' sign and not displayed by ds9, but can be parsed back
     """
-    with open(filename, 'wt') as f:
+    with open(filename, 'w') as f:
         f.write('# Region file format: DS9 version 4.0\n')
         if starlist.DAO_hdr is not None:
             write_dao_header(starlist.DAO_hdr, f, '#')
