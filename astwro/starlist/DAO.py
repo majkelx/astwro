@@ -35,7 +35,7 @@ DAO.extensions = {
 
 DAO_file_firstline = ' NL    NX    NY  LOWBAD HIGHBAD  THRESH     AP1  PH/ADU  RNOISE    FRAD'
 
-def starlist_from_file(file, dao_type = None):
+def read_dao_file(file, dao_type = None):
     """
     Construct StarList from daophot output file.
     The header lines in file may be missing.
@@ -53,7 +53,7 @@ def starlist_from_file(file, dao_type = None):
     return _parse_file(file, _determine_columns(file, dao_type))
 
 
-def write_file(starlist, file, dao_type=None):
+def write_dao_file(starlist, file, dao_type=None):
     """
     Write StarList object into daophot  file.
     :param starlist: StarList instance to be writen
@@ -83,13 +83,19 @@ def _determine_columns(file, dao_type):
 
 def _write_file(starlist, file, columns):
     f, to_close = _get_stream(file, 'w')
-    _write_header(starlist.DAO_hdr, file)
+    if starlist.DAO_hdr is not None:
+        write_dao_header(starlist.DAO_hdr, file)
+        f.write('\n')
     _write_table(starlist, file, columns)
     _close_files(to_close)
 
-def _write_header(hdr, file):
-    if hdr is None:
-        return
+def dump_dao_hdr(hdr, line_prefix=''):
+    """
+    returns two line string representation of header dictionary
+    :param dict hdr: dao header dictionary like StarList.DAO_hdr
+    :param str line_prefix: add this prefix at beginning of every line (e.g. comment char)
+    :rtype str
+    """
     first_line = ''
     second_line = ''
     second_line_frmt = ['{:3.0f}', '{:6.0f}', '{:6.0f}', '{:8.1f}', '{:8.1f}', '{:8.2f}',
@@ -106,14 +112,23 @@ def _write_header(hdr, file):
     except KeyError:
         # sometimes header is shorter, it's OK'
         pass
-    file.write(first_line + '\n' + second_line + '\n\n')
+    return line_prefix + first_line + '\n' + line_prefix + second_line + '\n'
+
+def write_dao_header(hdr, stream, line_prefix=''):
+    """
+    writes two lines of dao header
+    :param dict hdr: dao header dictionary like StarList.DAO_hdr
+    :param file stream: to write
+    :param str line_prefix: add this prefix at beginning of every line (e.g. comment char)
+    """
+    stream.write(dump_dao_hdr(hdr, line_prefix=line_prefix))
 
 
 def _write_table(starlist, file, columns):
     for i, row in starlist.iterrows():
         for col in columns:
-            val = row.get(col)
-            if not val: # not all columns exist in StarList, do not write rest of them
+            val = i if col == 'id' else row.get(col)
+            if val is None: # not all columns exist in StarList, do not write rest of them
                 break
             fmt = DAO.formats.get(col)
             if not fmt:
@@ -124,26 +139,55 @@ def _write_table(starlist, file, columns):
 
 def _parse_file(file, columns):
     f, to_close = _get_stream(file, 'r')
-    hdr = _parse_header(f)
+    hdr, _ = read_dao_header(f)
     fl = _parse_table(f, columns)
     _close_files(to_close)
     fl.DAO_hdr = hdr
     return  fl
 
 
-def _parse_header(file):
+def read_dao_header(stream, line_prefix=''):
+    """
+    tries to read dao header, if fails returns already read characters
+    :param file stream: open input file
+    :param line_prefix: additional prefix expected on the beginning of line
+    :return: tuple (header dict, stolen chars)
+             if header is detected, reads 2 lines of stream and returns (dict, None)
+             else reads couple of chars and return (None, couple-of-chars)
+    """
     # we are very smart, if first two characters of ile are not ' N', we suppose there is no header
     # and we get not too much to disturb further parsing of tables
-    if file.read(2) != DAO_file_firstline[:2]:
-        return None
-    hdr = DAO_file_firstline[:2] + file.readline() # first line
-    val = file.readline()
+    signature = ' NL'
+    stolen_chars = ''
+    for c in line_prefix + signature:
+        r = stream.read(1)
+        stolen_chars += r
+        if c != r: # no header signature  found
+            return None, stolen_chars
+
+    hdr = stolen_chars + stream.readline() # first line
+    val = stream.readline()
+    return parse_dao_hdr(hdr, val, line_prefix), None
+
+def parse_dao_hdr(hdr, val, line_prefix=''):
+    """
+    creates dao header dict form two lines of file header
+    :param str hdr: first line
+    :param str val: second line
+    :param line_prefix: expected line prefix
+    :return: dict with dao header compatible with StarList.DAO_header
+    """
+    # cut prefix
+    hdr = hdr[len(line_prefix):] # first line
+    val = val[len(line_prefix):] # second line
     # split keys, split values, zip them into list of tuples, then create dictionary out of that
     return dict(zip(hdr.split(), val.split()))
 
 
-def _parse_table(f, hdr):
-    df = pd.read_table(f, names=hdr, sep='\s+', na_values='-9.999', index_col=False)
+
+def _parse_table(f, cols):
+    df = pd.read_table(f, names=cols, sep='\s+', na_values='-9.999', index_col='id')
+    df.insert(0, 'id', df.index.to_series())
     return StarList(df)
 
 

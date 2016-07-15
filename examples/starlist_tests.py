@@ -3,7 +3,7 @@ from astwro.pydaophot import daophot
 import astwro.starlist as sl
 import sys
 
-s = sl.starlist_from_file('i.lst')
+s = sl.read_dao_file('i.lst')
 print (s)
 
-sl.write_file(s, sys.stdout, sl.DAO.LST_FILE)
+sl.write_dao_file(s, sys.stdout, sl.DAO.LST_FILE)

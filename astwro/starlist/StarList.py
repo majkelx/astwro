@@ -8,6 +8,15 @@ class StarList(pd.DataFrame):
     # StarList properties extending  pd.DataFrame
     _metadata = ['_DAO_hdr']
 
+    @staticmethod
+    def new():
+        """Returns empty StarList instance with columns id,x,y"""
+        idx = pd.Series(name='id', dtype='int64')
+        id = pd.Series(dtype='int64')
+        x = pd.Series(dtype='float64')
+        y = pd.Series(dtype='float64')
+        return StarList({'id': id, 'x': x, 'y': y}, index=idx)
+
     @property
     def _constructor(self):
 
