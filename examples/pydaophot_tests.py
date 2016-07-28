@@ -3,11 +3,10 @@ from logging import *
 from astwro.pydaophot import daophot, allstar, fname
 import os
 import time
-
+from astwro.sampledata import fits_image
 
 
 # basicConfig(level=INFO)
-fits = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'NGC6871.fits')
 
 
 start_time = time.time()
@@ -18,8 +17,8 @@ for i in range(0):
     info('###ITERATION %d' % i)
 #    dphot1.reset()
     dphot2 = daophot()
-    dphot1.ATtach(fits)
-    dphot2.ATtach(fits)
+    dphot1.ATtach(fits_image())
+    dphot2.ATtach(fits_image())
     dphot2.OPtion('FITTING', 5.5)
     dphot1.FInd(1,1)
     dphot2.FInd(1,1)
@@ -41,7 +40,7 @@ for i in range(0):
 
 ## ONE
 d = daophot()
-d.ATtach(fits)
+d.ATtach(fits_image())
 d.FInd(1, 1)
 d.PHotometry()
 d.PIck()

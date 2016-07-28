@@ -15,8 +15,13 @@ class ASRunner(DAORunner):
     create_subtracted_image = False
     # output processors
     options = None
-    result = None
+    __result = None
     __option_commands = ''
+
+    @property
+    def result(self):
+        self.wait_for_results()
+        return self.__result
 
     def __init__(self, config=None, dir=None,
                  allstaropt=None,
@@ -44,7 +49,7 @@ class ASRunner(DAORunner):
         new.photometry_file = deepcopy(self.photometry_file, memo)
         new.create_subtracted_image = deepcopy(self.create_subtracted_image, memo)
         new.options = deepcopy(self.options, memo)
-        new.result = deepcopy(self.result, memo)
+        new.result = deepcopy(self.__result, memo)
         new.__option_commands = deepcopy(self.__option_commands, memo)
         return new
 
@@ -100,6 +105,6 @@ class ASRunner(DAORunner):
         self.rm_from_working_dir(fname.ALLSTARS_FILE)
         if self.create_subtracted_image:
             self.rm_from_working_dir(fname.SUBTRACTED_IMAGE_FILE)
-        self.result = AsOp_result()
-        self._insert_processing_step(commands, output_processor=self.result)
+        self.__result = AsOp_result()
+        self._insert_processing_step(commands, output_processor=self.__result)
 
