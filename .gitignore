@@ -95,3 +95,6 @@ ENV/
 pyraf/
 
 tmp/
+
+#examples tmp dirs
+examples/psf_red_*/

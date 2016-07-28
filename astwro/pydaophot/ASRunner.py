@@ -51,8 +51,8 @@ class ASRunner(DAORunner):
     def _on_exit(self):
         pass
 
-    def reset(self):
-        DAORunner.reset(self)
+    def _reset(self):
+        DAORunner._reset(self)
         self.options = AsOp_opt()
         self._insert_processing_step('WA=0\n', output_processor=self.options)
         result = None

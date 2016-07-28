@@ -1,5 +1,6 @@
 import shutil
 from tempfile import mkdtemp
+from copy import deepcopy
 
 
 class TmpDir(object):
@@ -9,20 +10,25 @@ class TmpDir(object):
     path = None
     dir_is_tmp = True
     _prefix = ''
+    _base = None
 
-    def __init__(self, path=None, prefix='astwro_tmp_'):
+    def __init__(self, use_existing=None, prefix='astwro_tmp_', base_dir=None):
         """
-        :param path:   If provided, instance will point to that directory and not delete it on destruct
-        :param prefix: Prefix for temporary dir
+        :param str use_existing:    If provided, instance will point to that directory and not delete it on destruct
+        :param str prefix:          Prefix for temporary dir
+        :param str base_dir:        Where to crate tem dir, in None system default is used
         """
         self._prefix = prefix
-        if path is None:
-            self.path = mkdtemp(prefix=prefix)
+        self._base = base_dir
+        if use_existing is None:
+            self.path = mkdtemp(prefix=prefix, dir=base_dir)
             self.dir_is_tmp = True
         else:
-            self.path = path
+            self.path = use_existing
             self.dir_is_tmp = False
 
+    def clone(self):
+        return deepcopy(self)
 
     def __del__(self):
         self._rm_dir()
@@ -44,11 +50,11 @@ class TmpDir(object):
         new = cls.__new__(cls)
         memo[id(self)] = new
         if self.dir_is_tmp:
-            new.__init__(prefix=self._prefix)
+            new.__init__(prefix=self._prefix, base_dir=self._base)
             shutil.rmtree(new.path)
             shutil.copytree(self.path, new.path, symlinks=True)
         else:
-            new.__init__(path=self.path)
+            new.__init__(use_existing=self.path)
         return new
 
     def _rm_dir(self):

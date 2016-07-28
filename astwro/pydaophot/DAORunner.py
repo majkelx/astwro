@@ -1,8 +1,9 @@
 import os
 from .Runner import Runner
 
+
 class fname:
-    ''' filenames in temp work dir '''
+    """ filenames in temp work dir """
     DAOPHOT_OPT = 'daophot.opt'
     PHOTO_OPT = 'photo.opt'
     ALLSTAR_OPT = APERTURES_FILE = 'allstar.opt'
@@ -15,11 +16,8 @@ class fname:
     ALLSTARS_FILE = ALS_FILE = 'i.als'
     SUBTRACTED_IMAGE_FILE = SUB_FILE = 'i.sub.fits'
 
-
-
 class DAORunner(Runner):
     """base for daophot package runners runner"""
-
 
     def __init__(self, config=None, dir=None):
         Runner.__init__(self, config=config, dir=dir)
@@ -27,8 +25,7 @@ class DAORunner(Runner):
     def __deepcopy__(self, memo):
         return Runner.__deepcopy__(self, memo)
 
-
-    # dao files managegement
+    # dao files management
     def apertures_file_push(self, src_path):
         self.copy_to_working_dir(src_path, fname.PHOTO_OPT)
 

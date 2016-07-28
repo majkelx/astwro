@@ -8,6 +8,7 @@ class DPRunner(DAORunner):
     """daophot runner"""
     daophotopt = None
     photoopt = None
+    preattach_image = None
     # output processors
     OPtion_result = None
     ATtach_result = None
@@ -25,10 +26,12 @@ class DPRunner(DAORunner):
         :param photoopt:    photo.opt file, if None build in default file will be used, can be added later
                             by DPRunner.copy_to_working_dir(file, fname.PHOTO_OPT)
         :param image_file   if provided this file will be automatically attached (AT) as first daophot command
+                            if None ATtache() should be called explicitly
         """
         self.executable = os.path.expanduser(config.get('executables', 'daophot'))
         self.daophotopt = daophotopt if daophotopt is not None else os.path.join(get_package_config_path(), fname.DAOPHOT_OPT)
         self.photoopt   = photoopt   if photoopt   is not None else os.path.join(get_package_config_path(), fname.PHOTO_OPT)
+        self.preattach_image = image
         DAORunner.__init__(self, config=config, dir=dir)
         self.OPtion_result = DPOP_OPtion()
         self._insert_processing_step('', output_processor=self.OPtion_result)
@@ -40,6 +43,7 @@ class DPRunner(DAORunner):
         new = DAORunner.__deepcopy__(self, memo)
         new.daophotopt = deepcopy(self.daophotopt, memo)
         new.photoopt = deepcopy(self.photoopt, memo)
+        new.preattach_image = deepcopy(self.preattach_image, memo)
         new.OPtion_result = deepcopy(self.OPtion_result, memo)
         new.ATtach_result = deepcopy(self.ATtach_result, memo)
         new.FInd_result = deepcopy(self.FInd_result, memo)
@@ -51,8 +55,8 @@ class DPRunner(DAORunner):
     def _on_exit(self):
         pass
 
-    def reset(self):
-        DAORunner.reset(self)
+    def _reset(self):
+        DAORunner._reset(self)
         self.ATtach_result = None
         self.FInd_result = None
         self.PHotometry_result = None
@@ -60,6 +64,8 @@ class DPRunner(DAORunner):
         self.PSf_result = None
         self.OPtion_result = DPOP_OPtion()
         self._insert_processing_step('', output_processor=self.OPtion_result)
+        if self.preattach_image:
+            self.ATtach(self.preattach_image)
 
     def _init_workdir_files(self, dir):
         DAORunner._init_workdir_files(self, dir)
@@ -67,8 +73,17 @@ class DPRunner(DAORunner):
         self.copy_to_working_dir(self.photoopt)
 
     # daophot commands
-    def ATtach(self, image_file):
-        self.link_to_working_dir(image_file, 'i.fits')
+    def ATtach(self, image_file = None):
+        """
+        Add AT command to run queue. This should be first command. daophot crashes otherwise (at least my version).
+        If image_file parameter is provided in constructor, ATtach is done there.
+        :param str image_file: image to attach file will be symlinked to work dir as i.fits,
+                   if None 'i.fits' (file or symlink) is expected in working dir
+        :return: DPOP_ATtach instance for getting results: ATtach_result property
+        """
+        if image_file is not None:
+            self._get_ready_for_commands()  # wait for completion before changes in working dir
+            self.link_to_working_dir(image_file, 'i.fits')
         # self.copy_to_working_dir(image_file, fname.IMAGE_FILE)
         processor = DPOP_ATtach()
         self._insert_processing_step('ATTACH\ni.fits\n', output_processor=processor)
@@ -93,6 +108,7 @@ class DPRunner(DAORunner):
         if isinstance(options, str) and value is None:  # filename
             # daophot operates in his tmp dir and has limited buffer for file path
             # so symlink file to its working dir
+            self._get_ready_for_commands()  # wait for completion before changes in working dir
             self.link_to_working_dir(options, 'tmp.opt')
             commands += 'tmp.opt\n\n'
         else:
@@ -111,6 +127,7 @@ class DPRunner(DAORunner):
     def FInd(self, frames_av = 1, frames_sum = 1, starlist_file=fname.FOUNDSTARS_FILE):
         if self.ATtach_result is None:
             raise Exception('No imput file attached, call ATttache first.')
+        self._get_ready_for_commands()  # wait for completion before changes in working dir
         self.rm_from_working_dir(starlist_file)
         commands = 'FIND\n{},{}\n{}\nyes\n'.format(frames_av, frames_sum, starlist_file)
         processor = DpOp_FInd()
@@ -119,6 +136,7 @@ class DPRunner(DAORunner):
         return processor
 
     def PHotometry(self, photoopt=None, stars_file=None, photometry_file=None):
+        self._get_ready_for_commands()  # wait for completion before changes in working dir
         if photometry_file is None:
             self.rm_from_working_dir(fname.PHOTOMETRY_FILE)
         photoopt   = self.expand_default_file_path(photoopt)
@@ -131,6 +149,7 @@ class DPRunner(DAORunner):
         return processor
 
     def PIck(self, number_of_stars_to_pick=50, faintest_mag=20, photometry_file=None, psf_stars_file=None):
+        self._get_ready_for_commands()  # wait for completion before changes in working dir
         if photometry_file is None:
             self.rm_from_working_dir(fname.PSF_STARS_FILE)
         photometry_file = self.expand_default_file_path(photometry_file)
@@ -147,6 +166,7 @@ class DPRunner(DAORunner):
         return processor
 
     def PSf(self, photometry_file=None, psf_stars_file=None, psf_file=None):
+        self._get_ready_for_commands()  # wait for completion before changes in working dir
         if psf_file is None:
             self.rm_from_working_dir(fname.PSF_FILE)
         photometry_file = self.expand_default_file_path(photometry_file)

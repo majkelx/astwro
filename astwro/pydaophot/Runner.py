@@ -3,11 +3,13 @@ import sys
 import shutil
 from copy import deepcopy
 try:
+    # noinspection PyCompatibility
     from StringIO import StringIO  # python2
 except ImportError:
-    from io import StringIO # python3
+    from io import StringIO  # python3
 import subprocess as sp
 try:
+    # noinspection PyUnresolvedReferences
     from subprocess import TimeoutExpired  # python 3 only
 except ImportError:
     pass
@@ -38,6 +40,16 @@ class Runner(object):
         self.__stream_keeper = StreamKeeper(runner=self)
         self.__output_processor_chain = self.__stream_keeper
         self._prepare_dir(dir)
+
+    def _reset(self):
+        """Resets runner without cleaning/changing working dir
+           allows execution of new sequence in same dir and files"""
+        self.__process = None
+        self.__stream_keeper.stream = None
+        self.output = None
+        self.stderr = None
+        self.__commands = ''
+        self.__output_processor_chain = self.__stream_keeper
 
     def __del__(self):
         self.close()
@@ -73,15 +85,6 @@ class Runner(object):
         self._on_exit()
         self.dir = None
 
-
-    def reset(self):
-        """Resets runner without cleaning/changing working dir
-           allows execution of new sequence in same dir and files"""
-        self.__process = None
-        self.__stream_keeper.stream = None
-        self.output = None
-        self.__output_processor_chain = self.__stream_keeper
-
     def _init_workdir_files(self, dir):
         pass
 
@@ -90,7 +93,7 @@ class Runner(object):
             dir = tmpdir(prefix='pydaophot_tmp')
             info('Using temp dir %s', dir)
         elif isinstance(dir, str):
-            dir = tmpdir(path=dir)
+            dir = tmpdir(use_exiting=dir)
         elif not isinstance(dir, TmpDir):
             raise TypeError('dir must be either: TmpDir, str, None')
         self.dir = dir
@@ -149,7 +152,8 @@ class Runner(object):
         except OSError:
             pass
 
-    def expand_default_file_path(self, path):
+    @staticmethod
+    def expand_default_file_path(path):
         """Expand user ~ directory and finds absolute path. Utility not
         very useful externally..."""
         if path is None:
@@ -161,7 +165,7 @@ class Runner(object):
     def _pre_run(self, wait):
         pass
 
-    def run(self, wait = True):
+    def run(self, wait=True):
         self._pre_run(wait)
         try:
             self.__process = sp.Popen([self.executable],
@@ -176,31 +180,60 @@ class Runner(object):
         if wait:
             self.__communicate(self.__commands)
         else:
-            if sys.version_info[0] > 2: # python 3 has timeout in communicate
+            if sys.version_info[0] > 2:  # python 3 has timeout in communicate
                 try:
                     self.__communicate(self.__commands, timeout=0.01)
                 except TimeoutExpired:
                     pass
-            else: # python 2 - write directly to stdin
+            else:  # python 2 - write directly to stdin
                 self.__process.stdin.write(self.__commands)
 
-    def wait_for_results (self):
-        if self.output is None:
-            if self.__process is None:
-                raise Exception('Call run() before asking for results.')
-            self.__communicate()
+    def is_ready_to_run(self):
+        """
+        Returns True if there are some commands waiting for run but process was not started yet
+        :return: bool
+        """
+        return self.__commands and self.__process is None
 
-    def __communicate(self, input=None, timeout=None):
-        i = input.encode(encoding='ascii') if input else None
+    def is_running(self):
+        """
+        Returns if runner is running: executable was started in async mode, and no output collected yet.
+         Note, that even if executable has finished, output will not be collected and is_running will
+          return True until user asks for results or call wait_for_results()
+        :return: bool
+        """
+        return self.__process is not None and self.output is None
+
+    def is_after_run(self):
+        """
+        Returns True if process has finished and output is available
+        :return: bool
+        """
+        return self.output is not None
+
+    def wait_for_results(self):
+        if self.is_running():
+            self.__communicate()
+        if self.is_ready_to_run():
+            self.run(wait=True)
+
+    def __communicate(self, inpt=None, timeout=None):
+        i = inpt.encode(encoding='ascii') if inpt else None
         o, e = self.__process.communicate(i, timeout=timeout) if timeout else self.__process.communicate(i)
         self.output = o.decode('ascii')
         self.stderr = e.decode('ascii')
         info('STDOUT:\n' + self.output)
         self.__stream_keeper.stream = StringIO(self.output)
 
+    def _get_ready_for_commands(self):
+        if self.is_running():
+            self.wait_for_results()
+        if self.is_after_run():
+            self._reset()
+
     def _insert_processing_step(self, std_in, output_processor=None):
-        if self.__process is not None:
-            raise Exception('Process iw/was running. Cannot add commands. (call reset() ?)')
+        self._get_ready_for_commands()
+
         self.__commands += std_in
         if output_processor is not None:
             if not isinstance(output_processor, OutputProvider):
@@ -211,4 +244,3 @@ class Runner(object):
 
     def _on_exit(self):
         pass
-

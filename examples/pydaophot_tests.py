@@ -16,7 +16,7 @@ dphot1 = daophot()
 
 for i in range(0):
     info('###ITERATION %d' % i)
-    dphot1.reset()
+#    dphot1.reset()
     dphot2 = daophot()
     dphot1.ATtach(fits)
     dphot2.ATtach(fits)
