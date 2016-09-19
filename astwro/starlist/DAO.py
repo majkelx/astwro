@@ -1,4 +1,5 @@
 from .StarList import StarList
+from .file_helpers import *
 import pandas as pd
 
 
@@ -39,6 +40,7 @@ def read_dao_file(file, dao_type = None):
     """
     Construct StarList from daophot output file.
     The header lines in file may be missing.
+    :rtype: StarList
     :param file: open stream or filename, if stream dao_type must be specified
     :param dao_type: file format, one of DAO.XXX_FILE constants:
                     - DAO.COO_FILE
@@ -56,6 +58,7 @@ def read_dao_file(file, dao_type = None):
 def write_dao_file(starlist, file, dao_type=None):
     """
     Write StarList object into daophot  file.
+    :rtype: None
     :param starlist: StarList instance to be writen
     :param file: writable stream or filename, if stream dao_type must be specified
     :param dao_type: file format, one of DAO.XXX_FILE constants:
@@ -82,12 +85,12 @@ def _determine_columns(file, dao_type):
 
 
 def _write_file(starlist, file, columns):
-    f, to_close = _get_stream(file, 'w')
+    f, to_close = get_stream(file, 'w')
     if starlist.DAO_hdr is not None:
-        write_dao_header(starlist.DAO_hdr, file)
+        write_dao_header(starlist.DAO_hdr, f)
         f.write('\n')
-    _write_table(starlist, file, columns)
-    _close_files(to_close)
+    _write_table(starlist, f, columns)
+    close_files(to_close)
 
 def dump_dao_hdr(hdr, line_prefix=''):
     """
@@ -121,7 +124,9 @@ def write_dao_header(hdr, stream, line_prefix=''):
     :param file stream: to write
     :param str line_prefix: add this prefix at beginning of every line (e.g. comment char)
     """
+    f, to_close = get_stream(stream, 'w')
     stream.write(dump_dao_hdr(hdr, line_prefix=line_prefix))
+    close_files(to_close)
 
 
 def _write_table(starlist, file, columns):
@@ -138,10 +143,10 @@ def _write_table(starlist, file, columns):
 
 
 def _parse_file(file, columns):
-    f, to_close = _get_stream(file, 'r')
+    f, to_close = get_stream(file, 'r')
     hdr, _ = read_dao_header(f)
     fl = _parse_table(f, columns)
-    _close_files(to_close)
+    close_files(to_close)
     fl.DAO_hdr = hdr
     return  fl
 
@@ -184,23 +189,7 @@ def parse_dao_hdr(hdr, val, line_prefix=''):
     return dict(zip(hdr.split(), val.split()))
 
 
-
 def _parse_table(f, cols):
     df = pd.read_table(f, names=cols, sep='\s+', na_values='-9.999', index_col='id')
     df.insert(0, 'id', df.index.to_series())
     return StarList(df)
-
-
-def _get_stream(file, mode):
-    to_close = []
-    if isinstance(file, str):
-        f = open(file, 'r')
-        to_close.append(f)
-    else:
-        f = file
-    return f, to_close
-
-
-def _close_files(to_close):
-    for f in to_close:
-        f.close()

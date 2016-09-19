@@ -5,10 +5,7 @@ from . import config
 
 daophot_cfg = config.parse_config_files()
 
-def daophot(dir=None,
-            daophotopt=None,
-            photoopt=None,
-            image_file=None):
+def daophot(image_file=None, daophotopt=None, photoopt=None, dir=None):
     """
     creates instance of daophot runner DPRunner
     :param dir:         pathname or TmpDir object - working directory for daophot,

@@ -40,6 +40,12 @@ class TestRunners(unittest.TestCase):
         d.PSf()
         self.assertGreater(d.PSf_result.chi, 0)
 
+    def test_auto_attach_find_expl_run(self):
+        d = daophot(self.image)
+        d.FInd(1, 1)
+        d.run()
+        self.assertGreater(d.FInd_result.stars, 0)
+
     def test_implicit_reset(self):
         d = daophot(image_file=self.image)
         self.assertGreater(d.ATtach_result.picture_size[0], 0) # implicit run 1

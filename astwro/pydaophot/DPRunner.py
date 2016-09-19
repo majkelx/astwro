@@ -25,7 +25,7 @@ class DPRunner(DAORunner):
                             by DPRunner.copy_to_working_dir(file, fname.DAOPHOT_OPT)
         :param photoopt:    photo.opt file, if None build in default file will be used, can be added later
                             by DPRunner.copy_to_working_dir(file, fname.PHOTO_OPT)
-        :param image_file   if provided this file will be automatically attached (AT) as first daophot command
+        :param image:       if provided this file will be automatically attached (AT) as first daophot command
                             if None ATtache() should be called explicitly
         """
         self.executable = os.path.expanduser(config.get('executables', 'daophot'))
@@ -94,16 +94,24 @@ class DPRunner(DAORunner):
         self._insert_processing_step('EXIT\n', output_processor=DaophotCommandOutputProcessor())
 
     def OPtion(self, options, value=None):
-        """Set daophot option(s). options can be either:
-                dictionary:             dp.OPtion({'GAIN': 9, 'FI': '6.0'})
-                iterable of tuples:     dp.OPtion([('GA', 9.0), ('FITTING RADIUS', '6.0')])
+        """
+        Adds daophot OPTION command to execution stack.
+        :param options: can be either:
+                dictionary:
+                                        >>> dp = DPRunner()
+                                        >>> dp.OPtion({'GAIN': 9, 'FI': '6.0'})
+                iterable of tuples:
+                                        >>> dp.OPtion([('GA', 9.0), ('FITTING RADIUS', '6.0')])
                 option key, followed by value in 'value' parameter:
-                                        dp.OPtion('GA', 9.0)
+                                        >>> dp.OPtion('GA', 9.0)
                 filename string of daophot.opt-formatted file:
-                                        dp.OPtion('opts/newdaophot.opt')
-                """
-        # if self.ATtach_result is None:
-        #     warning('daophot (at least some version) crashes on ATtach after OPtion. Expect crash on next ATtach.')
+                                        >>> dp.OPtion('opts/newdaophot.opt')
+        :param value: value if `options` is just single key
+        :return: results object also accessible as `DPRunner.OPtion_result` property
+        :rtype: DPOP_OPtion
+        """
+        if self.ATtach_result is None:
+            warning('daophot (at least some version) crashes on ATtach after OPtion. Expect crash on next ATtach.')
         commands = 'OPT\n'
         if isinstance(options, str) and value is None:  # filename
             # daophot operates in his tmp dir and has limited buffer for file path
@@ -125,6 +133,16 @@ class DPRunner(DAORunner):
         return processor
 
     def FInd(self, frames_av = 1, frames_sum = 1, starlist_file=fname.FOUNDSTARS_FILE):
+        """
+        Adds daophot FIND command to execution stack.
+        :param int frames_av: averaged frames in image (default: 1)
+        :param int frames_sum: summed frames in image (default: 1)
+        :param str starlist_file: output coo file, in most cases do not change default i.coo,
+            rather copy result using
+            >> d.copy_from_work_dir(fname.COO_FILE, dest)
+        :return: results object also accessible as `DPRunner.FInd_result` property
+        :rtype: DpOp_FInd
+        """
         if self.ATtach_result is None:
             raise Exception('No imput file attached, call ATttache first.')
         self._get_ready_for_commands()  # wait for completion before changes in working dir
@@ -136,6 +154,15 @@ class DPRunner(DAORunner):
         return processor
 
     def PHotometry(self, photoopt=None, stars_file=None, photometry_file=None):
+        """
+        Adds daophot PHOTOMETRY command to execution stack.
+        :param str photoopt: photo.opt file to be used,
+                default: sample file, file set in constructor or copied into `DPRunner.dir`
+        :param str stars_file: input list of stars, default: i.coo in `DPRunner.dir`
+        :param str photometry_file:
+        :return: results object also accessible as `DPRunner.PHotometry_result` property
+        :rtype: DpOp_PHotometry
+        """
         self._get_ready_for_commands()  # wait for completion before changes in working dir
         if photometry_file is None:
             self.rm_from_working_dir(fname.PHOTOMETRY_FILE)
@@ -169,6 +196,8 @@ class DPRunner(DAORunner):
         self._get_ready_for_commands()  # wait for completion before changes in working dir
         if psf_file is None:
             self.rm_from_working_dir(fname.PSF_FILE)
+        self.rm_from_working_dir(fname.NEI_FILE)
+        self.rm_from_working_dir(fname.ERR_FiLE)
         photometry_file = self.expand_default_file_path(photometry_file)
         psf_stars_file = self.expand_default_file_path(psf_stars_file)
         psf_file = self.expand_default_file_path(psf_file)
@@ -182,4 +211,12 @@ class DPRunner(DAORunner):
         self.PSf_result = processor
         return processor
 
-
+    def _process_starlist(self, s, **kwargs):
+        if kwargs['add_psf_errors']:
+            import pandas as pd
+            err = self.PSf_result.errors
+            idx = [i for i,_ in err]
+            val = [v for _,v in err]
+            col = pd.Series(val, index=idx)
+            s['psf_err'] = col
+        return s

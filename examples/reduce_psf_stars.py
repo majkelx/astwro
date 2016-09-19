@@ -1,7 +1,7 @@
 from __future__ import print_function
 from astwro.pydaophot import daophot, allstar, fname
 from astwro.starlist import read_dao_file
-from astwro.tmpdir import tmpdir
+from astwro.utils import tmpdir
 import os
 import sys
 import numpy as np
@@ -34,7 +34,7 @@ results_dir = tmpdir(use_exiting=results_path, prefix='psf_red_', base_dir=os.ge
 results_dir.dir_is_tmp = False
 print ('Expect results in: {!s}'.format(results_dir),file=sys.stderr)
 
-dp = daophot(dir=results_dir, image_file=fits, daophotopt=dopt, photoopt=popt)
+dp = daophot(image_file=fits, daophotopt=dopt, photoopt=popt, dir=results_dir)
 
 # 1. Make sure that we are ready to PSF photometry, collect all needed files in dp.dir
 # --
@@ -132,7 +132,6 @@ while winner_score < prev_winner_score:
     ## calculate score for population:
     # define score function
 
-    ## TODO: reset obiektow
     ## TODO metadane sesji - individual, population, round
 
     break ## TODO: temporary break

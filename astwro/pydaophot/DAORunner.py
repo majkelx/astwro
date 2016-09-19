@@ -12,6 +12,7 @@ class fname:
     PHOTOMETRY_FILE = AP_FILE = 'i.ap'
     PSF_STARS_FILE = LST_FILE ='i.lst'
     NEIGHBOURS_FILE = NEI_FILE = 'i.nei'
+    ERR_FiLE = 'i.err'
     PSF_FILE = 'i.psf'
     ALLSTARS_FILE = ALS_FILE = 'i.als'
     SUBTRACTED_IMAGE_FILE = SUB_FILE = 'i.sub.fits'
@@ -27,17 +28,29 @@ class DAORunner(Runner):
 
     # dao files management
     def apertures_file_push(self, src_path):
+        """
+        Copies aperture file photo.opt into working dir. File will be used by daophot
+        :param str src_path: patch to src file
+        :rtype: None
+        """
         self.copy_to_working_dir(src_path, fname.PHOTO_OPT)
 
     def apertures_file_pull(self, dst_path = '.'):
+        """
+        Extracts current aperture file photo.opt from working dir.
+        :param dst_path: destination
+        :rtype: None
+        """
         self.copy_from_working_dir(fname.PHOTO_OPT, dst_path)
 
     def apertures_file_create(self, apertures, IS, OS):
-        """Creates photo.opt in daophot working dir
-            :arg apertures -- list of apertures A1,A2... e.g. [6.0,8.0,12.0]
-            :arg IS -- inner radius of sky annulus
-            :arg OS -- outer radius of sky annulus
-            """
+        """
+        Creates photo.opt in daophot working dir from list
+        :param list apertures: list of apertures A1,A2... e.g. [6.0,8.0,12.0]
+        :param float IS: inner radius of sky annulus
+        :param float OS: outer radius of sky annulus
+        :rtype: None
+        """
         assert len(apertures) > 0 and len(apertures) < 13
         self.rm_from_working_dir(fname.PHOTO_OPT)
         with open(os.path.join(self.dir, fname.PHOTO_OPT), 'w') as f:
@@ -45,3 +58,16 @@ class DAORunner(Runner):
             f.write('IS={:.2f}'.format(IS))
             f.write('OS={:.2f}'.format(OS))
 
+    def get_stars(self, file, **kwargs):
+        """
+        Returns `StarList` object with stars extracted from daophot files
+        :param str fname: source file for starlist, use 'fname' constants eg: s = dp.get_stars(fname.PSF_STARS_FILE)
+        :param kwargs: additional parameters for extra processing in subclasses e.g. add_psf_errors=True
+        :rtype: StarList
+        """
+        from astwro.starlist import read_dao_file
+        s = read_dao_file(self.file_from_working_dir(file))
+        return self._process_starlist(s, **kwargs)
+
+    def _process_starlist(self, s, **kwargs):
+        return s

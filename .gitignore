@@ -98,3 +98,6 @@ tmp/
 
 #examples tmp dirs
 examples/psf_red_*/
+
+#MacOS
+.DS_Store

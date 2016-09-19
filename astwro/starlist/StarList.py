@@ -30,3 +30,7 @@ class StarList(pd.DataFrame):
     @DAO_hdr.setter
     def DAO_hdr(self, hdr):
         self._DAO_hdr = hdr
+
+    def count(self):
+        """returns number of stars in list"""
+        return self.shape[0]

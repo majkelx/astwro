@@ -1,0 +1,5 @@
+astropy
+scipy
+deap
+bitarray>=0.8
+argparse

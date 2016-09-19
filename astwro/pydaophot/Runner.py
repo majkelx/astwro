@@ -15,7 +15,7 @@ except ImportError:
     pass
 from logging import *
 from .OutputProviders import StreamKeeper, OutputProvider
-from astwro.tmpdir import tmpdir, TmpDir
+from astwro.utils import tmpdir, TmpDir
 
 
 class Runner(object):
