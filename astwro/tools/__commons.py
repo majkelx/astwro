@@ -1,11 +1,14 @@
 from __future__ import print_function, division
 
 
-def bunch_kwargs(**kwargs):
+def bunch_kwargs(parser, **kwargs):
     from collections import namedtuple
     """Makes object from arguments dict. used to have common interface
     for arguments passed to main() from command line or calling script."""
-    return namedtuple('ArgsBunch', kwargs.keys())(*kwargs.values())
+#    return namedtuple('ArgsBunch', kwargs.keys())(*kwargs.values())
+    arg = parser.parse_args([])   # create arguments namespace with defaults
+    vars(arg).update(kwargs) # update with provided kwargs
+    return arg
 
 
 def version_string():

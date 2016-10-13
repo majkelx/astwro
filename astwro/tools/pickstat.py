@@ -15,15 +15,10 @@ import __commons as commons
 # TODO: expand this script to (optionally) leave result files - make it allstar runner
 # TODO: implement creating ds9 region (why? or remove that option)
 
-# image = args.image
-# coo = args.coo
-# lst = args.lst
 
-
-def main(**kwargs):
+def __do(args):
     # 1 do daophot aperture and psf photometry and run allstar
 
-    args = commons.bunch_kwargs(**kwargs)
     dp = daophot(image_file=args.image)
     dp.copy_to_working_dir(args.coo, fname.COO_FILE)
     dp.PHotometry()
@@ -54,7 +49,7 @@ def __arg_parser():
                     '  \"the observed pixel-to-pixel scatter from the model image profile \n'
                     '  DIVIDED BY the expected pixel-to-pixel scatter from the image profile\").\n'
                     'The same mean chi is used as function to be minimized by genetic \n'
-                    'algorithm in pickga.py. This script allows quick comparison \n'
+                    'algorithm in gapick.py. This script allows quick comparison \n'
                     'between different PSF stars sets.',)
     parser.add_argument('image', type=str,
                         help='FITS image file')
@@ -66,6 +61,12 @@ def __arg_parser():
                         help='create ds9 region files <name>.coo.reg and <name>.lst.reg')
     return parser
 
+# Below: standard skeleton for astwro.tools
+
+def main(**kwargs):
+    args = commons.bunch_kwargs(__arg_parser(), **kwargs)
+    return __do(args)
+
 
 def info():
     commons.info(__arg_parser())
@@ -73,6 +74,5 @@ def info():
 
 if __name__ == '__main__':
 
-    parser = __arg_parser()
-    args = parser.parse_args()
-    print (main(**args.__dict__))
+    __args = __arg_parser().parse_args()
+    __do(__args)

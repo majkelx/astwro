@@ -7,8 +7,7 @@ from __future__ import print_function, division
 import __commons as commons
 
 
-def main(**kwargs):
-    arg = commons.bunch_kwargs(**kwargs)
+def __do(arg):
 
     # refer to args: arg.foo
     # IMPLEMENT HERE
@@ -28,11 +27,18 @@ def __arg_parser():
     return parser
 
 
+# Below: standard skeleton for astwro.tools
+
+def main(**kwargs):
+    args = commons.bunch_kwargs(__arg_parser(), **kwargs)
+    return __do(args)
+
+
 def info():
     commons.info(__arg_parser())
 
 
 if __name__ == '__main__':
 
-    args = __arg_parser().parse_args()
-    print (main(**args.__dict__))
+    __args = __arg_parser().parse_args()
+    __do(__args)
