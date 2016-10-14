@@ -1,6 +1,6 @@
 from .StarList import StarList
 from .file_helpers import *
-from .dao import parse_dao_hdr, write_dao_header, DAO_file_firstline
+from .daofiles import parse_dao_hdr, write_dao_header, DAO_file_firstline
 import pandas as pd
 import re
 

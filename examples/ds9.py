@@ -1,4 +1,4 @@
-from astwro.starlist.dao import read_dao_file, write_dao_file
+from astwro.starlist.daofiles import read_dao_file, write_dao_file
 from astwro.starlist.ds9 import write_ds9_regions, read_ds9_regions
 from astwro.starlist import StarList
 
