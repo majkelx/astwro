@@ -28,6 +28,7 @@ import __commons as commons
 
 
 def __do(arg):
+    """Main routine, common for command line, and python scripts call"""
 
     if arg.silent:
         def print_info(msg):
@@ -68,9 +69,11 @@ def __do(arg):
     all_cand_no = candidates.count()
     candidates = candidates[candidates.psf_err < arg.max_psf_err]
 
-    print_info("{} good candidates ({} rejected) of mag {} to {}".format(
+    print_info("{} good candidates "
+               "({} rejected because psf error exceeded threshold of {}) of mag {} to {}".format(
         candidates.count(),
         all_cand_no - candidates.count(),
+        arg.max_psf_err,
         candidates.mag1.max(),
         candidates.mag1.min()))
 
@@ -386,8 +389,8 @@ def __arg_parser():
                              ' according to expected number of resulting PDF stars (default: 0.3)')
     parser.add_argument('--ga_max_iter', metavar='n', dest='ga_max_iter', default=100, type=int,
                         help='maximum number of iterations - generations (default: 100)')
-    parser.add_argument('--ga_pop', metavar='n', dest='ga_pop', default=300, type=int,
-                        help='population size of GA (default: 300)')
+    parser.add_argument('--ga_pop', metavar='n', dest='ga_pop', default=80, type=int,
+                        help='population size of GA (default: 80)')
     parser.add_argument('--ga_cross_prob', metavar='x', dest='ga_cross_prob', default=0.5, type=float,
                         help='crossover probability of GA (default: 0.5)')
     parser.add_argument('--ga_mut_prob', metavar='x', dest='ga_mut_prob', default=0.2, type=float,
@@ -401,7 +404,10 @@ def __arg_parser():
 # Below: standard skeleton for astwro.tools
 
 def main(**kwargs):
+    """Entry point for python script calls. Parameters identical to command line"""
+    # Extract default arguments from command line parser and apply kwargs parameters
     args = commons.bunch_kwargs(__arg_parser(), **kwargs)
+    # call main routine - common form command line and python calls
     return __do(args)
 
 
@@ -410,6 +416,6 @@ def info():
 
 
 if __name__ == '__main__':
-
-    __args = __arg_parser().parse_args()
-    __do(__args)
+    # Entry point for command line
+    __args = __arg_parser().parse_args()  # parse command line arguments
+    __do(__args)  # call main routine - common form command line and python calls

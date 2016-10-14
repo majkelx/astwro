@@ -8,6 +8,7 @@ import __commons as commons
 
 
 def __do(arg):
+    """Main routine, common for command line, and python scripts call"""
 
     # refer to args: arg.foo
     # IMPLEMENT HERE
@@ -30,7 +31,10 @@ def __arg_parser():
 # Below: standard skeleton for astwro.tools
 
 def main(**kwargs):
+    """Entry point for python script calls. Parameters identical to command line"""
+    # Extract default arguments from command line parser and apply kwargs parameters
     args = commons.bunch_kwargs(__arg_parser(), **kwargs)
+    # call main routine - common form command line and python calls
     return __do(args)
 
 
@@ -39,6 +43,6 @@ def info():
 
 
 if __name__ == '__main__':
-
-    __args = __arg_parser().parse_args()
-    __do(__args)
+    # Entry point for command line
+    __args = __arg_parser().parse_args()  # parse command line arguments
+    __do(__args)  # call main routine - common form command line and python calls
