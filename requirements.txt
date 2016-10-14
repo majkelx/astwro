@@ -1,3 +1,4 @@
+pandas
 astropy
 scipy
 deap
