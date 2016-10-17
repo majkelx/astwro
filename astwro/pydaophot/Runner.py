@@ -206,7 +206,7 @@ class Runner(object):
         """
         return self.__process is not None and self.output is None
 
-    def is_after_run(self):
+    def has_finished_run(self):
         """
         Returns True if process has finished and output is available
         :return: bool
@@ -233,7 +233,7 @@ class Runner(object):
     def _get_ready_for_commands(self):
         if self.is_running():
             self.wait_for_results()
-        if self.is_after_run():
+        if self.has_finished_run():
             self._reset()
 
     def _insert_processing_step(self, std_in, output_processor=None):
