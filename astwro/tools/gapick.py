@@ -6,6 +6,7 @@ from __future__ import print_function, division
 import random
 import sys
 import os
+import time
 from copy import deepcopy
 from itertools import izip_longest
 
@@ -24,6 +25,7 @@ from astwro.starlist import write_dao_file
 from astwro.starlist import write_ds9_regions
 from astwro.starlist import DAO
 from astwro.utils import cyclefile
+from astwro.utils import progressbar
 import __commons as commons
 
 
@@ -134,6 +136,8 @@ def __do(arg):
         :param list population:
         :return: list fitnesses (1-element couples as deap likes)
         """
+        progress = progressbar(total=len(population), step=arg.parallel)
+        progress.print_progress(0)
         fitnesses = []
         # https://docs.python.org/3/library/itertools.html#itertools-recipes grouper()
         # grouping population into chunks of size `parallel`
@@ -159,7 +163,9 @@ def __do(arg):
                         all_s = read_dao_file(worker['allstar'].file_from_working_dir(fname.ALS_FILE))
                         fitnesses.append((sigmaclip(all_s.psf_chi)[0].mean(),))
                     else:
+                        # TODO: warning("daopgot PSF failed, assigning fitness: 2.0")
                         fitnesses.append((2.0,))
+            progress.print_progress()
         return fitnesses
 
 
@@ -212,13 +218,22 @@ def __do(arg):
     pop = toolbox.population(n=arg.ga_pop)
 
     # Evaluate the entire population
+    print_info('-- Initial Generation 0 --')
     fitnesses = eval_population(pop)
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
 
+    start = time.time()
     # Begin the evolution
-    for g in range(arg.ga_max_iter):
-        print_info('-- Generation {:d} --'.format(g))
+    for g in range(1, arg.ga_max_iter):
+        if g > 1:
+            ETA = time.asctime(time.localtime(start + (time.time() - start) * arg.ga_max_iter / (g - 1)))
+        else:
+            ETA = '(calculating...)'
+        print_info('-- Generation {:d} of {:d} ETA: {} --'.format(
+            g,
+            arg.ga_max_iter,
+            ETA))
         # Select the next generation individuals
         offspring = toolbox.select(pop, len(pop))
         # Clone the selected individuals
