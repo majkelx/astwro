@@ -86,7 +86,7 @@ class DPRunner(DAORunner):
             self.link_to_working_dir(image_file, 'i.fits')
         # self.copy_to_working_dir(image_file, fname.IMAGE_FILE)
         processor = DPOP_ATtach()
-        self._insert_processing_step('ATTACH\ni.fits\n', output_processor=processor)
+        self._insert_processing_step('ATTACH i.fits\n', output_processor=processor)
         self.ATtach_result = processor
         return processor
 
