@@ -117,32 +117,6 @@ def __do(arg):
 
     eval_count = 0
 
-    # Evaluate individual function - most important one - function which is minimized here
-    # First one is fst but is here only for testing purpose (algorithm with that one is equivalent
-    # of sorting candidates stars be psf_err)
-    # Second uses allstar to calculate psf for all stars in field and checks mean error. Slow like a hell
-
-    def evaluate_fast_test(candidates, min_stars, dir, individual):
-        """
-        Fast version FOR TESTING ONLY - prefers low mean PSF error from errors returned by daophot's PSF.
-        And at least max_stars  stars
-        :param StarList candidates:
-        :param int min_stars:
-        :param bitarray individual:
-        :param TmpDir dir: directory with daophot results (not used in this version)
-        :rtype: float
-        """
-        global eval_count
-        eval_count += 1
-        stars = individual.count(True)
-        sum_err = 0.0
-        if stars < min_stars:
-            return 1.0,  # high - bad score
-        else:
-            for i, v in enumerate(individual):
-                if v:
-                    sum_err += candidates.iloc[i]['psf_err']
-        return sum_err / stars,
 
     # create pool of workers TODO do not use global
     pool = []
@@ -192,35 +166,6 @@ def __do(arg):
                         fitnesses.append((2.0,))
         return fitnesses
 
-    def evaluate_allstar(candidates, min_stars, dir, individual):
-        """
-        Proper version - uses allstar to calculate psf for all stars in field and checks mean error.
-        :param StarList candidates:
-        :param int min_stars: (not used here, let errors tell how many stars needed)
-        :param bitarray individual:
-        :param TmpDir dir: directory with daophot results
-        :rtype: float
-        """
-        # obtain StarList from current genome
-        pdf_s = select_stars(candidates, individual)
-        # create new daophot runner
-        dp = daophot(os.path.join(str(dir), 'i.fits'))  # TODO pass daophot runner instead of dir
-        # create PSF stars file .lst TODO: proper DAO headers in write!
-        write_dao_file(pdf_s, dp.file_from_working_dir(fname.LST_FILE))
-        # copy .ap file from previously calculated by daophot
-        dp.copy_to_working_dir(os.path.join(str(dir), 'i.ap'), fname.AP_FILE)
-        # TODO provide opt files!
-        # caluclate PSF
-        dp.PSf()
-        dp.run()
-        # create new allstar runner sharing working dir with daophot
-        al = allstar(dp.dir)
-        # calculate psf for all stars
-        al.run()
-        # read result .als file
-        all_s = read_dao_file(al.file_from_working_dir(fname.ALS_FILE))
-        # calculate and return mean error
-        return all_s.psf_chi.mean()
 
     def pmap(function, iterable):
         if arg.parallel == 1:
@@ -264,8 +209,6 @@ def __do(arg):
     # The Genetic Operators
 
     # set min_stars to all_cand_no*ga_init_prob/2
-    toolbox.register("evaluate", evaluate_allstar, candidates, all_cand_no * arg.ga_init_prob / 2, dp.dir)
-    # toolbox.register("evaluate", evaluate_fast_test, candidates, all_cand_no * arg.ga_init_prob / 2, dp.dir)
     toolbox.register("mate", tools.cxTwoPoint)
     toolbox.register("mutate", tools.mutFlipBit, indpb=arg.ga_mut_str)
     toolbox.register("select", tools.selTournament, tournsize=3)
