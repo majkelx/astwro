@@ -118,6 +118,7 @@ r_pick = re.compile(r'(\d+) +suitable candidates')
 #    for PSf
 r_psf = re.compile(r'Chi    Parameters...\n>* +(-?\d+\.\d*) +(-?\d+\.\d*) +(-?\d+\.\d*)')
 r_psf_errors = re.compile(r' (\d+) +(\d+.\d+) [ ?*]')
+r_psf_failed_to_converge = re.compile(r'Failed to converge')
 
 # Allstar regexp
 r_alls_separator = re.compile(r'Input image name:')
@@ -203,7 +204,7 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
             t = 0
         else:
             t = int(t) * 1000
-        return int(self.data()[5]) + t
+        return int(self.data[5]) + t
 
     @property
     def err(self):
@@ -255,6 +256,11 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
     __errors = None
 
     @property
+    def converged(self):
+        """False if daophot PSF routine does not produced result, e.g. 'Failed to converge'"""
+        return self.__get_data() is not None
+
+    @property
     def errors(self):
         if self.__errors is None:
             buf = self.get_buffer()  # TODO: implement 'saturated'
@@ -263,14 +269,11 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
 
     @property
     def data(self):
-        if self.__data is None:
-            buf = self.get_buffer()
-            match = r_psf.search(buf)
-            if match is None:
-                raise Exception('daophot PSF output doesnt match regexp r_psf:'
-                                ' error (or regexp is wrong). Output buffer:\n ' + buf)
-            self.__data = match.groups()
-        return self.__data
+        d = self.__get_data()
+        if d is None:
+            raise Exception('daophot PSF output doesnt match regexp r_psf:'
+                            ' PDF failed to converge?. Output buffer:\n ' + self.get_buffer())
+        return d
 
     @property
     def chi(self):
@@ -279,6 +282,14 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
     @property
     def hwhm_xy(self):
         return float(self.data[1]), float(self.data[2])
+
+    def __get_data(self):
+        if self.__data is None:
+            buf = self.get_buffer()
+            match = r_psf.search(buf)
+            if match is not None:
+                self.__data = match.groups()
+        return self.__data
 
 class AsOp_opt(OutputBufferedProcessor):
     __options = None

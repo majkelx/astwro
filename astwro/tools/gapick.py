@@ -149,20 +149,16 @@ def __do(arg):
             for individual, worker in zip(chunk, pool):
                 if individual:
                     worker['daophot'].wait_for_results()
-                    worker['allstar'].run(wait=False)  # parallel
+                    if worker['daophot'].PSf_result.converged:  # PSF is not always successful
+                        worker['allstar'].run(wait=False)  # parallel
             # wait for allstar for workers and process results
             for individual, worker in zip(chunk, pool):
                 if individual:
-                    worker['allstar'].wait_for_results()
-                    try:  # TODO temporary catch - clean it up
+                    if worker['daophot'].PSf_result.converged:
+                        worker['allstar'].wait_for_results()
                         all_s = read_dao_file(worker['allstar'].file_from_working_dir(fname.ALS_FILE))
                         fitnesses.append((sigmaclip(all_s.psf_chi)[0].mean(),))
-                    except Exception as e:
-                        print_info(e)  # Failed to converge from daophot usually.
-                        print_info(worker['daophot'].output)
-                        print_info(worker['daophot'].stderr)
-                        print_info(worker['allstar'].output)
-                        print_info(worker['allstar'].stderr)
+                    else:
                         fitnesses.append((2.0,))
         return fitnesses
 
