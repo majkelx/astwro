@@ -24,6 +24,8 @@ class Runner(object):
     dir = None
     output = None
     stderr = None
+    returncode = None
+    raise_on_exec_fault = True
     __cfg = None
     __commands = ''
     __process = None
@@ -224,6 +226,9 @@ class Runner(object):
         self.stderr = e.decode('ascii')
         info('STDOUT:\n' + self.output)
         self.__stream_keeper.stream = StringIO(self.output)
+        self.returncode = self.__process.returncode
+        if self.returncode < 0 and self.raise_on_exec_fault:
+            raise Exception('Execution failed, exit code {}'.format(self.returncode))
 
     def _get_ready_for_commands(self):
         if self.is_running():
