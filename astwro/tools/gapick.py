@@ -135,7 +135,7 @@ def __do(arg):
         d.copy_to_working_dir(dp.file_from_working_dir(fname.AP_FILE), fname.AP_FILE)
         pool.append({'daophot': d, 'allstar': a})
 
-    def eval_population(population):
+    def eval_population(population, show_progress):
         """
         Evaluates fitness for all individual in population.
         Use of one function for population (rather than for individuals)
@@ -143,8 +143,9 @@ def __do(arg):
         :param list population:
         :return: list fitnesses (1-element couples as deap likes)
         """
-        progress = progressbar(total=len(population), step=arg.parallel)
-        progress.print_progress(0)
+        if show_progress:
+            progress = progressbar(total=len(population), step=arg.parallel)
+            progress.print_progress(0)
         fitnesses = []
         f_max = 0.0
         # https://docs.python.org/3/library/itertools.html#itertools-recipes grouper()
@@ -180,7 +181,8 @@ def __do(arg):
             for i, f in enumerate(fitnesses):
                 if f[0] == 0.0:
                     fitnesses[i] = (f_max,)
-            progress.print_progress()
+            if show_progress:
+                progress.print_progress()
         return fitnesses
 
     # 2.2 Prepare output directory
@@ -236,7 +238,7 @@ def __do(arg):
 
     # Evaluate the entire population
     print_info('-- Initial Generation 0 of {} --'.format(arg.ga_max_iter))
-    fitnesses = eval_population(pop)
+    fitnesses = eval_population(pop, show_progress=not arg.no_progress)
 
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
@@ -265,7 +267,7 @@ def __do(arg):
                 del mutant.fitness.values
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = eval_population(invalid_ind)
+        fitnesses = eval_population(invalid_ind, show_progress=not arg.no_progress)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
         # New population from offspring
@@ -302,10 +304,8 @@ def __do(arg):
     print_info('Best individual is {}, {}'.format(best_ind, best_ind.fitness.values))
 
     best_stars = select_stars(candidates, best_ind)
-    if not arg.no_stdout:
-        print('\n'.join(map(str, best_stars.index)))
+    return best_stars
 
-        # write_ds9_regions(best_stars, 'best_for_psf.reg')
 
 
 def __arg_parser():
@@ -319,7 +319,7 @@ def __arg_parser():
                     ' will be output to stdout until suppressed by -no_stdout')
     parser.add_argument(metavar='image_file', type=str, default=None, dest='image_file', nargs='?',
                         help='FITS image file (default: astwro sample image)')
-    parser.add_argument('--coo_file', metavar='file', type=str, default=None, dest='coo_file',
+    parser.add_argument('--coo_file', '-c', metavar='file', type=str, default=None, dest='coo_file',
                         help='all stars list: coo file (default: from daophot FIND)')
     parser.add_argument('--frames_av', metavar='n', type=int, default=1, dest='frames_av',
                         help='frames ave - parameter of daophot FIND (default: 1)')
@@ -332,19 +332,21 @@ def __arg_parser():
     parser.add_argument('--max_psf_err', metavar='x', type=float, default=0.1, dest='max_psf_err',
                         help='threshold for PSF errors of candidates. '
                              'Stars for which error found be PSF command is greater than x will be rejected')
-    parser.add_argument('--parallel', metavar='n', type=int, default=8, dest='parallel',
+    parser.add_argument('--parallel', '-p', metavar='n', type=int, default=8, dest='parallel',
                         help='how many parallel processes can be forked, '
                              'n=1 avoids parallelism (default: 8)')
-    parser.add_argument('--out_dir', metavar='output_dir', type=str, default=None, dest='out_dir',
+    parser.add_argument('--out_dir', '-d', metavar='output_dir', type=str, default=None, dest='out_dir',
                         help='output directory. Directory will be created and result files will be stored there.'
                              ' Directory should not exist or --overwrite flag should be set'
                              ' (default: do not produce output files)')
-    parser.add_argument('--overwrite', action='store_true',
+    parser.add_argument('--overwrite', '-o', action='store_true',
                         help='if directory specified by --dir parameter exists, then ALL its content WILL BE DELETED')
     parser.add_argument('--no_stdout', action='store_true',
                         help='suppress printing result (list of best choice of PSF stars) to stdout at finish')
     parser.add_argument('--silent', action='store_true',
-                        help='suppress writing progress messages (once for every generation) to stderr')
+                        help='suppress writing status & stat messages (once for every generation) to stderr')
+    parser.add_argument('--no_progress', action='store_true',
+                        help='suppress showing progress bar')
     parser.add_argument('--ga_init_prob', metavar='x', dest='ga_init_prob', default=0.3, type=float,
                         help='what portion of candidates is used to initialize GA individuals.'
                              ' E.g. if there is 100 candidates, each of them will be '
@@ -352,9 +354,9 @@ def __arg_parser():
                              ' In other words if x=0.3 first population in GA will contain'
                              ' individuals with around 30 stars each. Value should be close'
                              ' according to expected number of resulting PDF stars (default: 0.3)')
-    parser.add_argument('--ga_max_iter', metavar='n', dest='ga_max_iter', default=100, type=int,
+    parser.add_argument('--ga_max_iter', '-i', metavar='n', dest='ga_max_iter', default=100, type=int,
                         help='maximum number of iterations - generations (default: 100)')
-    parser.add_argument('--ga_pop', metavar='n', dest='ga_pop', default=80, type=int,
+    parser.add_argument('--ga_pop', '-n', metavar='n', dest='ga_pop', default=80, type=int,
                         help='population size of GA (default: 80)')
     parser.add_argument('--ga_cross_prob', metavar='x', dest='ga_cross_prob', default=0.5, type=float,
                         help='crossover probability of GA (default: 0.5)')
@@ -383,4 +385,7 @@ def info():
 if __name__ == '__main__':
     # Entry point for command line
     __args = __arg_parser().parse_args()  # parse command line arguments
-    __do(__args)  # call main routine - common form command line and python calls
+    __stars = __do(__args)  # call main routine - common form command line and python calls
+    if not __args.no_stdout:
+        print('\n'.join(map(str, __stars.index)))
+
