@@ -7,6 +7,8 @@ import random
 import sys
 import os
 import time
+import numpy
+import pickle
 from copy import deepcopy
 from itertools import izip_longest
 
@@ -117,8 +119,13 @@ def __do(arg):
         n.fitness = deepcopy(individual.fitness)
         return n
 
-    eval_count = 0
-
+    def calc_spectrum(pop):
+        """calculates 'spectrogram' of population
+        which is a statistic of stars occurrences in population individuals """
+        spec = numpy.zeros(len(pop[0]))
+        for ind in pop:
+            spec += ind.tolist()
+        return spec
 
     # create pool of workers TODO do not use global
     pool = []
@@ -139,6 +146,7 @@ def __do(arg):
         progress = progressbar(total=len(population), step=arg.parallel)
         progress.print_progress(0)
         fitnesses = []
+        f_max = 0.0
         # https://docs.python.org/3/library/itertools.html#itertools-recipes grouper()
         # grouping population into chunks of size `parallel`
         for chunk in izip_longest(*([iter(population)] * arg.parallel)):
@@ -161,24 +169,19 @@ def __do(arg):
                     if worker['daophot'].PSf_result.converged:
                         worker['allstar'].wait_for_results()
                         all_s = read_dao_file(worker['allstar'].file_from_working_dir(fname.ALS_FILE))
-                        fitnesses.append((sigmaclip(all_s.psf_chi)[0].mean(),))
+                        f = sigmaclip(all_s.psf_chi)[0].mean()
+                        fitnesses.append((f,))
+                        if f > f_max: #  collect max
+                            f_max = f
                     else:
-                        # TODO: warning("daopgot PSF failed, assigning fitness: 2.0")
-                        fitnesses.append((2.0,))
+                        fitnesses.append((0.0,)) # temporary 0.0
+            # flatten fitnesses: make all 0.0 maximum of rest of population
+            # this make those individuals bad, but do not affect statistics too much
+            for i, f in enumerate(fitnesses):
+                if f[0] == 0.0:
+                    fitnesses[i] = (f_max,)
             progress.print_progress()
         return fitnesses
-
-
-    def pmap(function, iterable):
-        if arg.parallel == 1:
-            return map(function, iterable)
-        else:
-            if pmap.pool is None:
-                from multiprocessing import Pool
-                pmap.pool = Pool(arg.parallel)
-            return pmap.pool.map(function, iterable)
-
-    pmap.pool = None
 
     # 2.2 Prepare output directory
     if arg.out_dir:
@@ -211,29 +214,40 @@ def __do(arg):
     # The Genetic Operators
 
     # set min_stars to all_cand_no*ga_init_prob/2
-    toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register("mutate", tools.mutFlipBit, indpb=arg.ga_mut_str)
-    toolbox.register("select", tools.selTournament, tournsize=3)
+    toolbox.register('mate', tools.cxTwoPoint)
+    toolbox.register('mutate', tools.mutFlipBit, indpb=arg.ga_mut_str)
+    toolbox.register('select', tools.selTournament, tournsize=3)
+
+    # setup stats
+    stats_fits = tools.Statistics(key=lambda ind: ind.fitness.values)
+    stats_star = tools.Statistics(key=sum)  # number of stars is an sum of bitarray: [001101010001] has 5 stars
+    stats = tools.MultiStatistics(fitness=stats_fits, size=stats_star)
+    stats.register('avg', numpy.mean)
+    stats.register('std', numpy.std)
+    stats.register('min', numpy.min)
+    stats.register('max', numpy.max)
+
+    logbook = tools.Logbook()
+    logbook.header = 'gen', 'fitness', 'size'
+    logbook.chapters['fitness'].header = 'min', 'avg', 'max', 'std'
+    logbook.chapters['size'].header = 'min', 'avg', 'max'
 
     pop = toolbox.population(n=arg.ga_pop)
 
     # Evaluate the entire population
-    print_info('-- Initial Generation 0 --')
+    print_info('-- Initial Generation 0 of {} --'.format(arg.ga_max_iter))
     fitnesses = eval_population(pop)
+
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
+
+    record = stats.compile(pop)
+    logbook.record(gen=0, spectrum=calc_spectrum(pop), **record)
+    print_info (str(logbook.stream))
 
     start = time.time()
     # Begin the evolution
     for g in range(1, arg.ga_max_iter):
-        if g > 1:
-            ETA = time.asctime(time.localtime(start + (time.time() - start) * arg.ga_max_iter / (g - 1)))
-        else:
-            ETA = '(calculating...)'
-        print_info('-- Generation {:d} of {:d} ETA: {} --'.format(
-            g,
-            arg.ga_max_iter,
-            ETA))
         # Select the next generation individuals
         offspring = toolbox.select(pop, len(pop))
         # Clone the selected individuals
@@ -260,32 +274,29 @@ def __do(arg):
         # Gather all the fitnesses in one list and print the stats
         fits = [ind.fitness.values[0] for ind in pop]
 
-        length = len(pop)
-        mean = sum(fits) / length
-        sum2 = sum(x * x for x in fits)
-        std = abs(sum2 / length - mean ** 2) ** 0.5
-
-        print_info('Gen: {:3d}  Min {:.4f} Max {:.4f} Avg {:.4f} Std {:.4f} '.format(
-            g, min(fits), max(fits), mean, std))
-        # best from generation:
-        best_ind = tools.selBest(pop, 1)[0]
-        best_stars = select_stars(candidates, best_ind)
-        print_info('  best in generation contains {:d} stars'.format(best_stars.count()))
+        ETA = time.asctime(time.localtime(start + (time.time() - start) * arg.ga_max_iter / g))
+        record = stats.compile(pop)
+        logbook.record(gen=g, spectrum=calc_spectrum(pop), **record)
+        print_info(str(logbook.stream) + 'ETA: {}'.format(ETA))
 
         # for every generation create lst file and ds9 reg file of best and point symlinks to last generation
         if arg.out_dir:
+            best_ind = tools.selBest(pop, 1)[0]
+            best_stars = select_stars(candidates, best_ind)
             lst_file.next_file(g)
             reg_file.next_file(g)
             gen_file.next_file(g)
             write_dao_file(best_stars, lst_file.file, DAO.LST_FILE)
             write_ds9_regions(best_stars, reg_file.file)
-            sort_pop = sorted(pop, key=lambda x: x.fitness, reverse=True)
+            # sort_pop = sorted(pop, key=lambda x: x.fitness, reverse=True)
             for ind in pop:
                 gen_file.file.write(ind.to01() + '\n')
+            with open(os.path.join(arg.out_dir, 'logbook.pkl'), 'w') as f:
+                pickle.dump(logbook, f)
 
     # 3. Winner?
 
-    print_info('-- End of (successful) evolution, fitness evaluated {} times --'.format(eval_count))
+    print_info('-- End of (successful) evolution')
 
     best_ind = tools.selBest(pop, 1)[0]
     print_info('Best individual is {}, {}'.format(best_ind, best_ind.fitness.values))
