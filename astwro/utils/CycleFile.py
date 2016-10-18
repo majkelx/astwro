@@ -12,16 +12,18 @@ class CycleFile(object):
     file_mode = 'w'
     open_kwargs = None
 
-    def __init__(self, base_path, extension='', create_symlinks=True, symlink_suffix='_last', auto_close=True):
+    def __init__(self, path, basename, extension='', create_symlinks=True, symlink_suffix='_last', auto_close=True):
         """
         :param auto_close:
-        :param str base_path: patch and part of file name before counter
+        :param str path: patch to the file, absolute or relative, can be empty string '' for current directory
+        :param str basename: first part of file name before counter
         :param str extension:  part of filename after counter
         :param str create_symlinks: whether to create symlink to newest file
         :param str symlink_suffix:  part of suffix filename in place of counter value
         :param bool auto_close: close prev files on next_file nad destruction
         """
-        self.base_path = base_path
+        self.path = path
+        self.basename = basename
         self.extension = extension
         self.create_symlinks = create_symlinks
         self.symlink_suffix = symlink_suffix
@@ -39,14 +41,16 @@ class CycleFile(object):
         if self.auto_close and self.file is not None:
             self.file.close()
             self.file = None
-        filename = self.filename_formatter.format(self.base_path, counter, self.extension)
+        filename = self.filename_formatter.format(self.basename, counter, self.extension)
+        filepath = os.path.join(self.path, filename)
         if self.open_kwargs is not None:
-            self.file = open(filename, self.file_mode, **self.open_kwargs)
+            self.file = open(filepath, self.file_mode, **self.open_kwargs)
         else:
-            self.file = open(filename, self.file_mode)
+            self.file = open(filepath, self.file_mode)
         if self.create_symlinks:
-            syml_name = self.symlink_formatter.format(self.base_path, self.symlink_suffix, self.extension)
-            if os.path.exists(syml_name):
-                os.remove(syml_name)
-            os.symlink(filename, syml_name)
+            symlname = self.symlink_formatter.format(self.basename, self.symlink_suffix, self.extension)
+            symlpath = os.path.join(self.path, symlname)
+            if os.path.exists(symlpath):
+                os.remove(symlpath)
+            os.symlink(filename, symlpath)
         return self.file

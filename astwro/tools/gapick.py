@@ -194,10 +194,11 @@ def __do(arg):
             rmtree(arg.out_dir)
         copytree(str(dp.dir), arg.out_dir)
         # todo allstar.opt missing!
-        basename = os.path.join(arg.out_dir, 'gen')
-        lst_file = cyclefile(basename, '.lst')
-        reg_file = cyclefile(basename, '.reg')
-        gen_file = cyclefile(basename, '.gen')
+        path = arg.out_dir
+        basename = 'gen'
+        lst_file = cyclefile(path, basename, '.lst')
+        reg_file = cyclefile(path, basename, '.reg')
+        gen_file = cyclefile(path, basename, '.gen')
 
     # 2.3
 
@@ -340,12 +341,12 @@ def __arg_parser():
                              ' Directory should not exist or --overwrite flag should be set'
                              ' (default: do not produce output files)')
     parser.add_argument('--overwrite', '-o', action='store_true',
-                        help='if directory specified by --dir parameter exists, then ALL its content WILL BE DELETED')
-    parser.add_argument('--no_stdout', action='store_true',
+                        help='if directory specified by --out_dir parameter exists, then ALL its content WILL BE DELETED')
+    parser.add_argument('--no_stdout', '-t', action='store_true',
                         help='suppress printing result (list of best choice of PSF stars) to stdout at finish')
-    parser.add_argument('--silent', action='store_true',
+    parser.add_argument('--silent', '-s', action='store_true',
                         help='suppress writing status & stat messages (once for every generation) to stderr')
-    parser.add_argument('--no_progress', action='store_true',
+    parser.add_argument('--no_progress', '-b',  action='store_true',
                         help='suppress showing progress bar')
     parser.add_argument('--ga_init_prob', metavar='x', dest='ga_init_prob', default=0.3, type=float,
                         help='what portion of candidates is used to initialize GA individuals.'

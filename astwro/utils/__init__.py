@@ -14,18 +14,19 @@ def tmpdir(use_existing=None, prefix='astwro_tmp_', base_dir=None):
     return TmpDir(use_existing, prefix, base_dir)
 
 
-def cyclefile(base_path, extension='', create_symlinks=True, symlink_suffix='_last', auto_close=True):
+def cyclefile(path, basename, extension='', create_symlinks=True, symlink_suffix='_last', auto_close=True):
     """
     Creates CycleFile which can create series of files with names containing counter,
     with symlink to newest one
-    :param str base_path: patch and part of file name before counter
+    :param str path: patch to the file, absolute or relative, can be empty string '' for current directory
+    :param str basename: first part of file name before counter
     :param str extension:  part of filename after counter
     :param str create_symlinks: whether to create symlink to newest file
     :param str symlink_suffix:  part of suffix filename in place of counter value
     :param bool auto_close: close prev files on next_file nad destruction
     :rtype: CycleFile
     """
-    return CycleFile(base_path=base_path, extension=extension, create_symlinks=create_symlinks,
+    return CycleFile(path=path, basename=basename, extension=extension, create_symlinks=create_symlinks,
                      symlink_suffix=symlink_suffix, auto_close=auto_close)
 
 
