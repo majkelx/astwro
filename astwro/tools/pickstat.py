@@ -75,4 +75,4 @@ def info():
 if __name__ == '__main__':
 
     __args = __arg_parser().parse_args()
-    __do(__args)
+    print(__do(__args))
