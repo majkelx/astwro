@@ -29,7 +29,7 @@ class CycleFile(object):
         pass
 
     def __del__(self):
-        if self.auto_close and file is not None:
+        if self.auto_close and self.file is not None:
             self.file.close()
 
     def next_file(self, counter=None):
