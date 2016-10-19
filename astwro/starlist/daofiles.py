@@ -22,6 +22,9 @@ class DAO:
 
     formats = {
         'id': '{:7.0f}',
+        'mag_rel_psf': '{:9.4f}',
+        'mag_rel_psf_err': '{:9.4f}',
+        'psf_iter': '{:9.1f}',
     }
 
 DAO.extensions = {

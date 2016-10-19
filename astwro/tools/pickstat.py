@@ -63,8 +63,9 @@ def __arg_parser():
 
 # Below: standard skeleton for astwro.tools
 
-def main(**kwargs):
-    args = commons.bunch_kwargs(__arg_parser(), **kwargs)
+
+def main(image, coo, lst, **kwargs):
+    args = commons.bunch_kwargs(__arg_parser(), positional=[image, coo, lst], **kwargs)
     return __do(args)
 
 
