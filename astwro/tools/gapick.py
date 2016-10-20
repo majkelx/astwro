@@ -74,12 +74,10 @@ def __do(arg):
     candidates = candidates[candidates.psf_err < arg.max_psf_err]
 
     print_info("{} good candidates "
-               "({} rejected because psf error exceeded threshold of {}) of mag {} to {}".format(
+               "({} rejected because psf error exceeded threshold of {})".format(
         candidates.count(),
         all_cand_no - candidates.count(),
-        arg.max_psf_err,
-        candidates.mag1.max(),
-        candidates.mag1.min()))
+        arg.max_psf_err))
 
     # 2. From picked candidates find best subset, where best means minimizing mean of errors form allstar
     # ------------
