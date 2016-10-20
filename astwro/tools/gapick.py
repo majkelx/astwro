@@ -332,7 +332,8 @@ def __arg_parser():
                         help='number of stars to PICK as all candidates (default: 100)')
     parser.add_argument('--max_psf_err', metavar='x', type=float, default=0.1, dest='max_psf_err',
                         help='threshold for PSF errors of candidates. '
-                             'Stars for which error found be PSF command is greater than x will be rejected')
+                             'Stars for which error found be PSF command is greater than x will be rejected '
+                             '(default 0.1)')
     parser.add_argument('--parallel', '-p', metavar='n', type=int, default=8, dest='parallel',
                         help='how many parallel processes can be forked, '
                              'n=1 avoids parallelism (default: 8)')

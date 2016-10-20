@@ -1,24 +1,41 @@
 from .StarList import StarList
 from .file_helpers import *
 import pandas as pd
+from collections import namedtuple
 
 
-class DAO:
-    UNKNOWN_FILE = 0
-    FOUNDSTARS_FILE = COO_FILE = 1
-    PHOTOMETRY_FILE = AP_FILE = 2
-    PSF_STARS_FILE = LST_FILE = 3
-    NEIGHBOURS_FILE = NEI_FILE = 4
-    ALLSTARS_FILE = ALS_FILE = PK_FILE = NST_FILE = 5
-
-    columns = [
-        ['id'],
-        ['id', 'x', 'y', 'mag_rel_treshold', 'sharp', 'round', 'round_marg'],
-        [],
-        ['id', 'x', 'y', 'mag1', 'err1', 'tmp'],
-        [],
-        ['id', 'x', 'y', 'mag_rel_psf', 'mag_rel_psf_err', 'sky', 'psf_iter', 'psf_chi', 'psf_sharp'],
-    ]
+class DAO(object):
+    FType = namedtuple('DAOFileType', ['columns', 'extension', 'NL'])
+    UNKNOWN_FILE = FType(
+        columns   = ['id'] + range(1, 100),  # id then unknown columns
+        extension = '.txt',
+        NL = None,
+    )
+    COO_FILE = FType(
+        columns   = ['id', 'x', 'y', 'mag_rel_to_threshold', 'sharp', 'round', 'round_marg'],
+        extension = '.coo',
+        NL = 1,
+    )
+    AP_FILE = FType(
+        columns   = ['id', 'x', 'y'] + range(3, 100),  # id,x,y then unknown columns
+        extension = '.ap',
+        NL = 2,
+    )
+    LST_FILE = FType(
+        columns   = ['id', 'x', 'y', 'mag1', 'err1', 5],
+        extension = '.lst',
+        NL = 3,
+    )
+    NEI_FILE = FType(
+        columns   = ['id', 'x', 'y', 'mag1', 4],
+        extension = '.nei',
+        NL = 3,
+    )
+    ALS_FILE = FType(
+        columns   = ['id', 'x', 'y', 'mag_rel_psf', 'mag_rel_psf_err', 'sky', 'psf_iter', 'psf_chi', 'psf_sharp'],
+        extension = '.als',
+        NL = 1,
+    )
 
     formats = {
         'id': '{:7.0f}',
@@ -27,17 +44,9 @@ class DAO:
         'psf_iter': '{:9.1f}',
     }
 
-DAO.extensions = {
-    '.txt': DAO.UNKNOWN_FILE,
-    '.coo': DAO.COO_FILE,
-    '.ap':  DAO.AP_FILE,
-    '.lst': DAO.LST_FILE,
-    '.nei': DAO.NEI_FILE,
-    '.als': DAO.ALS_FILE,
-}
-
-
 DAO_file_firstline = ' NL    NX    NY  LOWBAD HIGHBAD  THRESH     AP1  PH/ADU  RNOISE    FRAD'
+
+__NaN = '-9.999'   # if there will be need to implement more NaN formats, add them into DAO types/column
 
 def read_dao_file(file, dao_type = None):
     """
@@ -55,10 +64,10 @@ def read_dao_file(file, dao_type = None):
                 if file is provided as filename
     :return: StarList instance
     """
-    return _parse_file(file, _determine_columns(file, dao_type))
+    return _parse_file(file, dao_type)
 
 
-def write_dao_file(starlist, file, dao_type=None):
+def write_dao_file(starlist, file, dao_type=DAO.UNKNOWN_FILE):
     """
     Write StarList object into daophot  file.
     :rtype: None
@@ -73,18 +82,7 @@ def write_dao_file(starlist, file, dao_type=None):
                 If missing extension of file will be used to determine file type
                 if file is provided as filename
     """
-    _write_file(starlist, file, _determine_columns(file, dao_type))
-
-
-def _determine_columns(file, dao_type):
-    if not dao_type:
-        if not isinstance(file, str):
-            raise TypeError('File must be filename or dao_type must be specified')
-        import os
-        dao_type = DAO.extensions[os.path.splitext(file)[1]]
-    if not DAO.columns[dao_type]:
-        raise NotImplemented('Columns for this file type not added into DAO.columns yet')
-    return DAO.columns[dao_type]
+    _write_file(starlist, file, dao_type.columns)
 
 
 def _write_file(starlist, file, columns):
@@ -94,6 +92,7 @@ def _write_file(starlist, file, columns):
         f.write('\n')
     _write_table(starlist, f, columns)
     close_files(to_close)
+
 
 def dump_dao_hdr(hdr, line_prefix=''):
     """
@@ -120,6 +119,7 @@ def dump_dao_hdr(hdr, line_prefix=''):
         pass
     return line_prefix + first_line + '\n' + line_prefix + second_line + '\n'
 
+
 def write_dao_header(hdr, stream, line_prefix=''):
     """
     writes two lines of dao header
@@ -138,17 +138,20 @@ def _write_table(starlist, file, columns):
             val = i if col == 'id' else row.get(col)
             if val is None: # not all columns exist in StarList, do not write rest of them
                 break
-            fmt = DAO.formats.get(col)
-            if not fmt:
-                fmt = '{:9.3f}'
+            if pd.isnull(val):
+                fmt = __NaN
+            else:
+                fmt = DAO.formats.get(col)
+                if not fmt:
+                    fmt = '{:9.3f}'
             file.write(fmt.format(val))
         file.write('\n')
 
 
-def _parse_file(file, columns):
+def _parse_file(file, dao_type):
     f, to_close = get_stream(file, 'r')
     hdr, _ = read_dao_header(f)
-    fl = _parse_table(f, columns)
+    fl = _parse_table(f, hdr, dao_type)
     close_files(to_close)
     fl.DAO_hdr = hdr
     return  fl
@@ -177,6 +180,7 @@ def read_dao_header(stream, line_prefix=''):
     val = stream.readline()
     return parse_dao_hdr(hdr, val, line_prefix), None
 
+
 def parse_dao_hdr(hdr, val, line_prefix=''):
     """
     creates dao header dict form two lines of file header
@@ -192,7 +196,33 @@ def parse_dao_hdr(hdr, val, line_prefix=''):
     return dict(zip(hdr.split(), val.split()))
 
 
-def _parse_table(f, cols):
-    df = pd.read_table(f, names=cols, sep='\s+', na_values='-9.999', index_col='id')
+def _parse_table(f, hdr, type):
+    df = pd.read_table(f, header=None, sep='\s+', na_values=__NaN, index_col=0)
     df.insert(0, 'id', df.index.to_series())
+    if type is None:
+        type = _guess_filetype(hdr, df)
+    if type == DAO.AP_FILE:
+        raise NotImplementedError()
+    df.columns = type.columns[:df.columns.size]
     return StarList(df)
+
+
+def _guess_filetype(header, table):
+    type = DAO.UNKNOWN_FILE
+    if header:
+        colno = table.columns.size
+        NL = int(header['NL'])
+        type = DAO.UNKNOWN_FILE
+        if NL == 1:
+            if colno == 7:
+                type = DAO.COO_FILE
+            elif colno == 9:
+                type = DAO.ALS_FILE
+        elif NL == 2:
+            type = DAO.AP_FILE
+        elif NL == 3:
+            if colno == 6:
+                type = DAO.LST_FILE
+            elif colno == 5:
+                type = DAO.NEI_FILE
+    return type
