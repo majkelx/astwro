@@ -324,9 +324,9 @@ def __arg_parser():
                         help='frames ave - parameter of daophot FIND (default: 1)')
     parser.add_argument('--frames_sum', metavar='n', type=int, default=1, dest='frames_sum',
                         help='frames summed - parameter of daophot FIND (default: 1)')
-    parser.add_argument('--lst_file', metavar='file', type=str, default=None, dest='lst_file',
+    parser.add_argument('--lst_file', '-l', metavar='file', type=str, default=None, dest='lst_file',
                         help='PSF candidates list: lst file (default: from daophot PICK)')
-    parser.add_argument('--stars_to_pick', metavar='n', dest='stars_to_pick', default=100, type=int,
+    parser.add_argument('--stars_to_pick', '-P', metavar='n', dest='stars_to_pick', default=100, type=int,
                         help='number of stars to PICK as all candidates (default: 100)')
     parser.add_argument('--max_psf_err', metavar='x', type=float, default=0.1, dest='max_psf_err',
                         help='threshold for PSF errors of candidates. '
@@ -347,7 +347,7 @@ def __arg_parser():
                         help='suppress writing status & stat messages (once for every generation) to stderr')
     parser.add_argument('--no_progress', '-b',  action='store_true',
                         help='suppress showing progress bar')
-    parser.add_argument('--ga_init_prob', metavar='x', dest='ga_init_prob', default=0.3, type=float,
+    parser.add_argument('--ga_init_prob', '-P', metavar='x', dest='ga_init_prob', default=0.3, type=float,
                         help='what portion of candidates is used to initialize GA individuals.'
                              ' E.g. if there is 100 candidates, each of them will be '
                              ' chosen to initialize individual genome with probability x. '
