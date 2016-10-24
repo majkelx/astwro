@@ -12,7 +12,7 @@ class fname:
     PHOTOMETRY_FILE = AP_FILE = 'i.ap'
     PSF_STARS_FILE = LST_FILE ='i.lst'
     NEIGHBOURS_FILE = NEI_FILE = 'i.nei'
-    ERR_FiLE = 'i.err'
+    ERR_FILE = 'i.err'
     PSF_FILE = 'i.psf'
     ALLSTARS_FILE = ALS_FILE = 'i.als'
     SUBTRACTED_IMAGE_FILE = SUB_FILE = 'i.sub.fits'

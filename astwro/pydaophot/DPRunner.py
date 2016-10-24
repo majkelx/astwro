@@ -197,7 +197,54 @@ class DPRunner(DAORunner):
         if psf_file is None:
             self.rm_from_working_dir(fname.PSF_FILE)
         self.rm_from_working_dir(fname.NEI_FILE)
-        self.rm_from_working_dir(fname.ERR_FiLE)
+        self.rm_from_working_dir(fname.ERR_FILE)
+        photometry_file = self.expand_default_file_path(photometry_file)
+        psf_stars_file = self.expand_default_file_path(psf_stars_file)
+        psf_file = self.expand_default_file_path(psf_file)
+        commands = 'PSF\n{}\n{}\n{}\n'.format(
+            photometry_file,
+            psf_stars_file,
+            psf_file
+        )
+        processor = DpOp_PSf()
+        self._insert_processing_step(commands, output_processor=processor)
+        self.PSf_result = processor
+        return processor
+
+    def SOrt(self, file, by, decreasing=None):
+        """
+        Adds daophot SORT command to execution stack.
+        :param str file: fname.COO_FILE etc... any fname.*_FILE to sort
+        :param by:  1-based column number, negative for descending order - daophot standard, or
+                    one of 'id', 'x', 'y', 'mag'
+        :param bool decreasing:  in not None, forces sort order
+        :return: results object, also accessible as `DPRunner.SOrt_result` property
+        :rtype: DpOp_Sort
+        """
+        self._get_ready_for_commands()  # wait for completion before changes in working dir
+        if isinstance(by, str):
+            by = by.lower()
+            if by == 'id': by = 1
+            elif by == 'x': by = 2
+            elif by == 'y': by = 3
+            elif by == 'mag': by = 4
+            else:
+                raise ValueError('parameter by, if string must be either: "id", "x", "y" or "mag"')
+        if decreasing is not None:
+            by = -abs(by) if decreasing else abs(by)
+        raise NotImplementedError("SORT command not implemented")
+
+
+
+
+
+    def SUbstar(self, psf_file=None, to_subtract_file=None, except_file=None, subtracted_image=None):
+        self._get_ready_for_commands()  # wait for completion before changes in working dir
+        if subtracted_image is None:
+            self.rm_from_working_dir(fname.SUBTRACTED_IMAGE_FILE)
+
+        self.rm_from_working_dir(fname.NEI_FILE)
+        self.rm_from_working_dir(fname.ERR_FILE)
         photometry_file = self.expand_default_file_path(photometry_file)
         psf_stars_file = self.expand_default_file_path(psf_stars_file)
         psf_file = self.expand_default_file_path(psf_file)
