@@ -347,7 +347,7 @@ def __arg_parser():
                         help='suppress writing status & stat messages (once for every generation) to stderr')
     parser.add_argument('--no_progress', '-b',  action='store_true',
                         help='suppress showing progress bar')
-    parser.add_argument('--ga_init_prob', '-P', metavar='x', dest='ga_init_prob', default=0.3, type=float,
+    parser.add_argument('--ga_init_prob', '-I', metavar='x', dest='ga_init_prob', default=0.3, type=float,
                         help='what portion of candidates is used to initialize GA individuals.'
                              ' E.g. if there is 100 candidates, each of them will be '
                              ' chosen to initialize individual genome with probability x. '
