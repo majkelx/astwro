@@ -183,7 +183,6 @@ def __do(arg):
                 progress.print_progress()
         return fitnesses
 
-    print (repr(arg))
     # 2.2 Prepare output directory
     if arg.out_dir:
         from shutil import copytree, rmtree
