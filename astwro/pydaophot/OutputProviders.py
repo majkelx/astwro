@@ -123,7 +123,7 @@ r_psf_failed_to_converge = re.compile(r'Failed to converge')
 # Allstar regexp
 r_alls_separator = re.compile(r'Input image name:')
 r_alls_opt = r_opt
-r_alls = re.compile(r'(\d+) +(\d+) +(\d+) +(\d+) *\n')
+r_alls = re.compile(r'(\d+) +(\d+) +(\d+) +(\d+).*\n')
 
 class DaophotCommandOutputProcessor(OutputBufferedProcessor):
 
@@ -326,6 +326,10 @@ class AsOp_result(OutputBufferedProcessor):
         """returns tuple: (disappeared_stars, converged_stars)"""
         if self.__stars is None:
             buf = self.get_buffer()
-            match = r_alls.search(buf)
-            self.__stars = match.group(3), match.group(4)
+            match = r_alls.findall(buf)
+            if len(match) == 1:
+                self.__stars = 0, 0  # error or sth
+            else:
+                res = match[-1][-2:]  # last occurrence, two last values
+                self.__stars = int(res[0]), int(res[1])
         return self.__stars
