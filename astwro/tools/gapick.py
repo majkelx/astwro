@@ -183,6 +183,7 @@ def __do(arg):
                 progress.print_progress()
         return fitnesses
 
+    print (repr(arg))
     # 2.2 Prepare output directory
     if arg.out_dir:
         from shutil import copytree, rmtree
@@ -192,11 +193,14 @@ def __do(arg):
             rmtree(arg.out_dir)
         copytree(str(dp.dir), arg.out_dir)
         # todo allstar.opt missing!
-        path = arg.out_dir
         basename = 'gen'
-        lst_file = cyclefile(path, basename, '.lst')
-        reg_file = cyclefile(path, basename, '.reg')
-        gen_file = cyclefile(path, basename, '.gen')
+        lst_file = cyclefile(arg.out_dir, basename, '.lst')
+        reg_file = cyclefile(arg.out_dir, basename, '.reg')
+        gen_file = cyclefile(arg.out_dir, basename, '.gen')
+        with open(os.path.join(arg.out_dir, 'about.txt'), 'w') as f:
+            for k, v in arg.__dict__.items():
+                print ('{}\t= {}'.format(k,v), file=f)
+
 
     # 2.3
 
