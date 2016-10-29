@@ -231,15 +231,29 @@ def __do(arg):
     stats.register('min', numpy.min)
     stats.register('max', numpy.max)
 
-    logbook = tools.Logbook()
-    logbook.header = 'gen', 'fitness', 'size'
-    logbook.chapters['fitness'].header = 'min', 'avg', 'max', 'std'
-    logbook.chapters['size'].header = 'min', 'avg', 'max'
+    start_gen = 0
 
-    pop = toolbox.population(n=arg.ga_pop)
+    if arg.checkpoint:
+        with open(arg.checkpoint, "r") as f:
+            checkpoint = pickle.load(f)
+        pop = checkpoint['population']
+        start_gen = checkpoint['generation']
+        hof = checkpoint['halloffame']
+        logbook = checkpoint['logbook']
+        print_info('-- Checkpoint Generation {} of {} --'.format(start_gen, start_gen + arg.ga_max_iter))
+    else:
+        hof = tools.HallOfFame(maxsize=10)
+
+        logbook = tools.Logbook()
+        logbook.header = 'gen', 'fitness', 'size'
+        logbook.chapters['fitness'].header = 'min', 'avg', 'max', 'std'
+        logbook.chapters['size'].header = 'min', 'avg', 'max'
+
+        pop = toolbox.population(n=arg.ga_pop)
+        print_info('-- Initial Generation 0 of {} --'.format(start_gen + arg.ga_max_iter))
+
 
     # Evaluate the entire population
-    print_info('-- Initial Generation 0 of {} --'.format(arg.ga_max_iter))
     fitnesses = eval_population(pop, show_progress=not arg.no_progress)
 
     for ind, fit in zip(pop, fitnesses):
@@ -247,11 +261,11 @@ def __do(arg):
 
     record = stats.compile(pop)
     logbook.record(gen=0, spectrum=calc_spectrum(pop), **record)
-    print_info (str(logbook.stream))
+    print_info (str(logbook.stream) + ' ETA: [... will be known with next gen]')
 
     start = time.time()
     # Begin the evolution
-    for g in range(1, arg.ga_max_iter):
+    for g in range(start_gen + 1, start_gen + arg.ga_max_iter):
         # Select the next generation individuals
         offspring = toolbox.select(pop, len(pop))
         # Clone the selected individuals
@@ -278,10 +292,11 @@ def __do(arg):
         # Gather all the fitnesses in one list and print the stats
         fits = [ind.fitness.values[0] for ind in pop]
 
+        # hof.update(pop)  # not implemented yet, __deapcopy__ of the Individual should work first
         ETA = time.asctime(time.localtime(start + (time.time() - start) * arg.ga_max_iter / g))
         record = stats.compile(pop)
         logbook.record(gen=g, spectrum=calc_spectrum(pop), **record)
-        print_info(str(logbook.stream) + 'ETA: {}'.format(ETA))
+        print_info(str(logbook.stream) + ' ETA: {}'.format(ETA))
 
         # for every generation create lst file and ds9 reg file of best and point symlinks to last generation
         if arg.out_dir:
@@ -295,8 +310,11 @@ def __do(arg):
             # sort_pop = sorted(pop, key=lambda x: x.fitness, reverse=True)
             for ind in pop:
                 gen_file.file.write(ind.to01() + '\n')
-            with open(os.path.join(arg.out_dir, 'logbook.pkl'), 'w') as f:
+            with open(os.path.join(arg.out_dir, 'logbook.pkl'), 'wb') as f:
                 pickle.dump(logbook, f)
+            checkpoint = dict(population=pop, generation=g, halloffame=hof, logbook=logbook)
+            with open(os.path.join(arg.out_dir, 'checkpoint.chk'), 'wb') as f:
+                pickle.dump(checkpoint, f)
 
     # 3. Winner?
 
@@ -338,6 +356,9 @@ def __arg_parser():
     parser.add_argument('--parallel', '-p', metavar='n', type=int, default=8, dest='parallel',
                         help='how many parallel processes can be forked, '
                              'n=1 avoids parallelism (default: 8)')
+    parser.add_argument('--checkpoint', '-C', metavar='file.chk', type=str, default=None, dest='checkpoint',
+                        help='Restore evaluation from checkpoint. Algorithm saves checkpoint.chk file avery generation, '
+                             'which allows resuming evolution, even with another parameters.')
     parser.add_argument('--out_dir', '-d', metavar='output_dir', type=str, default=None, dest='out_dir',
                         help='output directory. Directory will be created and result files will be stored there.'
                              ' Directory should not exist or --overwrite flag should be set'
@@ -358,7 +379,8 @@ def __arg_parser():
                              ' individuals with around 30 stars each. Value should be close'
                              ' according to expected number of resulting PDF stars (default: 0.3)')
     parser.add_argument('--ga_max_iter', '-i', metavar='n', dest='ga_max_iter', default=100, type=int,
-                        help='maximum number of iterations - generations (default: 100)')
+                        help='maximum number of iterations - generations. If restoring from checkpoint'
+                             'n means "n more generations" (default: 100)')
     parser.add_argument('--ga_pop', '-n', metavar='n', dest='ga_pop', default=80, type=int,
                         help='population size of GA (default: 80)')
     parser.add_argument('--ga_cross_prob', metavar='x', dest='ga_cross_prob', default=0.5, type=float,
