@@ -234,7 +234,7 @@ def __do(arg):
     start_gen = 0
 
     if arg.checkpoint:
-        with open(arg.checkpoint, "r") as f:
+        with open(arg.checkpoint, "rb") as f:
             checkpoint = pickle.load(f)
         pop = checkpoint['population']
         start_gen = checkpoint['generation']
