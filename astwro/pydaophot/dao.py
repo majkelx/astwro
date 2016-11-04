@@ -25,7 +25,7 @@ def allstar(dir=None,
             image_file=None,
             psf_file=None,
             photometry_file=None,
-            create_subtracted_image=False):
+            create_subtracted_image=True):
     """
     creates instance of allstar runner ASRunner
     :param dir:         pathname or TmpDir object - working directory for allstar,

@@ -8,11 +8,12 @@ from .OutputProviders import *
 
 class ASRunner(DAORunner):
     """allstar runner"""
+    input_file = None
     allstaropt = None
     image_file = None
     psf_file = None
     photometry_file = None
-    create_subtracted_image = False
+    create_subtracted_image = True
     # output processors
     options = None
     __result = None
@@ -28,7 +29,7 @@ class ASRunner(DAORunner):
                  image_file=None,
                  psf_file=None,
                  photometry_file=None,
-                 create_subtracted_image=False
+                 create_subtracted_image=True
                  ):
         self.executable = os.path.expanduser(config.get('executables', 'allstar'))
         self.allstaropt = allstaropt if allstaropt is not None else os.path.join(get_package_config_path(), fname.ALLSTAR_OPT)
@@ -43,6 +44,7 @@ class ASRunner(DAORunner):
     def __deepcopy__(self, memo):
         from copy import deepcopy
         new = DAORunner.__deepcopy__(self, memo)
+        new.input_file = deepcopy(self.input_file, memo)
         new.allstaropt = deepcopy(self.allstaropt, memo)
         new.image_file = deepcopy(self.image_file, memo)
         new.psf_file = deepcopy(self.psf_file, memo)
@@ -98,9 +100,10 @@ class ASRunner(DAORunner):
             self._insert_processing_step(commands)
 
     def _pre_run(self, wait):
-        commands = '\n{}\n\n\n\n{}\n'.format(
+        commands = '\n{}\n\n{}\n\n{}'.format(
             fname.IMAGE_FILE,
-            fname.SUBTRACTED_IMAGE_FILE if self.create_subtracted_image else ''
+            self.input_file if self.input_file else '',
+            fname.SUBTRACTED_IMAGE_FILE + '\n' if self.create_subtracted_image else ''
         )
         self.rm_from_working_dir(fname.ALLSTARS_FILE)
         if self.create_subtracted_image:
