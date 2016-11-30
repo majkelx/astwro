@@ -7,7 +7,7 @@ class fname:
     DAOPHOT_OPT = 'daophot.opt'
     PHOTO_OPT = 'photo.opt'
     ALLSTAR_OPT = APERTURES_FILE = 'allstar.opt'
-    IMAGE_FILE = 'i.fits'
+    IMAGE_FILE = FITS_FILE = 'i.fits'
     FOUNDSTARS_FILE = COO_FILE = 'i.coo'
     PHOTOMETRY_FILE = AP_FILE = 'i.ap'
     PSF_STARS_FILE = LST_FILE ='i.lst'
@@ -15,7 +15,7 @@ class fname:
     ERR_FILE = 'i.err'
     PSF_FILE = 'i.psf'
     ALLSTARS_FILE = ALS_FILE = 'i.als'
-    SUBTRACTED_IMAGE_FILE = SUB_FILE = 'i.sub.fits'
+    SUBTRACTED_IMAGE_FILE = SUB_FILE = 'is.fits'
 
 class DAORunner(Runner):
     """base for daophot package runners runner"""

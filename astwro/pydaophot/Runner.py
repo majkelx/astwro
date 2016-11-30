@@ -95,7 +95,7 @@ class Runner(object):
             dir = tmpdir(prefix='pydaophot_tmp')
             info('Using temp dir %s', dir)
         elif isinstance(dir, str):
-            dir = tmpdir(use_exiting=dir)
+            dir = tmpdir(use_existing=dir)
         elif not isinstance(dir, TmpDir):
             raise TypeError('dir must be either: TmpDir, str, None')
         self.dir = dir
@@ -110,10 +110,10 @@ class Runner(object):
 
     def link_to_working_dir(self, source, link_filename=None):
         """Creates symlink in runner's working dir under name filename or the same
-        as original if filename is None. Overwrites existing file."""
+        as original if filename is None. Overwrites existing link."""
         source = self.expand_default_file_path(source)
-        if not os.path.isfile(source):
-            raise IOError('Source file {} not found'.format(source))
+        # if not os.path.isfile(source):
+        #     raise IOError('Source file {} not found'.format(source))
         if link_filename is None:
             link_filename = os.path.basename(source)
         dest = os.path.join(self.dir.path, link_filename)
@@ -156,13 +156,43 @@ class Runner(object):
 
     @staticmethod
     def expand_default_file_path(path):
-        """Expand user ~ directory and finds absolute path. Utility not
-        very useful externally..."""
+        """Expand user ~ directory and finds absolute path."""
         if path is None:
             path = ''
         else:
             path = os.path.abspath(os.path.expanduser(path))
         return path
+
+    def _prepare_output_file(self, path):
+        # type: (str) -> str
+        """ delete existing file, make link for non-local files in worker's local dir """
+        path = os.path.expanduser(path)
+
+        if os.path.isabs(path):
+            lnk_name = 'olink.'+os.path.basename(path)
+            # TODO: use tmpfile maybe for link name to savoid conflicts on command stack
+            self.link_to_working_dir(path, lnk_name)
+            abspath = path
+            ret = lnk_name
+        else:
+            abspath = os.path.join(self.dir.path, path)
+            ret = path
+        if os.path.exists(abspath):
+            os.remove(abspath)
+        return ret
+
+    def _prepare_input_file(self, path):
+        # type: (str) -> str
+        """ make link for non-local files in worker's local dir """
+        path = os.path.expanduser(path)
+        ret = path
+
+        if os.path.isabs(path):
+            lnk_name = 'ilink.'+os.path.basename(path)
+            # TODO: use tmpfile maybe for link name to savoid conflicts on command stack
+            self.link_to_working_dir(path, lnk_name)
+            ret = lnk_name
+        return ret
 
     def _pre_run(self, wait):
         pass

@@ -291,6 +291,10 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
                 self.__data = match.groups()
         return self.__data
 
+
+class DpOp_SUbstar(OutputBufferedProcessor):
+    pass
+
 class AsOp_opt(OutputBufferedProcessor):
     __options = None
 
@@ -333,3 +337,4 @@ class AsOp_result(OutputBufferedProcessor):
                 res = match[-1][-2:]  # last occurrence, two last values
                 self.__stars = int(res[0]), int(res[1])
         return self.__stars
+

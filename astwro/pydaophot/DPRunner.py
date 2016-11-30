@@ -16,6 +16,8 @@ class DPRunner(DAORunner):
     PHotometry_result = None
     PIck_result = None
     PSf_result = None
+    SOrt_result = None
+    SUbstar_result = None
 
     def __init__(self, config=None, dir=None, daophotopt=None, photoopt=None, image=None):
         """
@@ -50,6 +52,8 @@ class DPRunner(DAORunner):
         new.PHotometry_result = deepcopy(self.PHotometry_result, memo)
         new.PIck_result = deepcopy(self.PIck_result, memo)
         new.PSf_result = deepcopy(self.PSf_result, memo)
+        new.SOrt_result = deepcopy(self.SOrt_result, memo)
+        new.SUbstar_result = deepcopy(self.SUbstar_result, memo)
         return new
 
     def _on_exit(self):
@@ -62,6 +66,8 @@ class DPRunner(DAORunner):
         self.PHotometry_result = None
         self.PIck_result = None
         self.PSf_result = None
+        self.SOrt_result = None
+        self.SUbstar_result = None
         self.OPtion_result = DPOP_OPtion()
         self._insert_processing_step('', output_processor=self.OPtion_result)
         if self.preattach_image:
@@ -73,7 +79,7 @@ class DPRunner(DAORunner):
         self.copy_to_working_dir(self.photoopt)
 
     # daophot commands
-    def ATtach(self, image_file = None):
+    def ATtach(self, image_file = fname.FITS_FILE):
         """
         Add AT command to run queue. This should be first command. daophot crashes otherwise (at least my version).
         If image_file parameter is provided in constructor, ATtach is done there.
@@ -81,12 +87,11 @@ class DPRunner(DAORunner):
                    if None 'i.fits' (file or symlink) is expected in working dir
         :return: DPOP_ATtach instance for getting results: ATtach_result property
         """
-        if image_file is not None:
-            self._get_ready_for_commands()  # wait for completion before changes in working dir
-            self.link_to_working_dir(image_file, 'i.fits')
+        self._get_ready_for_commands()  # wait for completion before changes in working dir
+        image_file = self._prepare_input_file(image_file, fname.FITS_FIL) #TODO: continue with 2nd par
         # self.copy_to_working_dir(image_file, fname.IMAGE_FILE)
         processor = DPOP_ATtach()
-        self._insert_processing_step('ATTACH i.fits\n', output_processor=processor)
+        self._insert_processing_step('ATTACH {}\n'.format(image_file), output_processor=processor)
         self.ATtach_result = processor
         return processor
 
@@ -192,6 +197,7 @@ class DPRunner(DAORunner):
         self.PIck_result = processor
         return processor
 
+    # TODO: file prameters to commands should be relative to working dir. Defaults given explicite: fname.XXX see: SUbstar
     def PSf(self, photometry_file=None, psf_stars_file=None, psf_file=None):
         self._get_ready_for_commands()  # wait for completion before changes in working dir
         if psf_file is None:
@@ -234,28 +240,39 @@ class DPRunner(DAORunner):
             by = -abs(by) if decreasing else abs(by)
         raise NotImplementedError("SORT command not implemented")
 
-
-
-
-
-    def SUbstar(self, psf_file=None, to_subtract_file=None, except_file=None, subtracted_image=None):
+    def SUbstar(self, subtract, leave_in=None, subtracted_image=fname.SUB_FILE, psf_file=fname.PSF_FILE):
+        # type: (str, str, str, str) -> DpOp_SUbstar
+        """
+        Adds daophot SUBSTAR command to execution stack.
+        :param subtract: relative to work dir pathname of stars to subtract file
+        :param leave_in: relative to work dir pathname of stars to be kept file (default: None)
+        :param psf_file: relative to work dir pathname of file with PSF (default i.psf)
+        :param subtracted_image: relative to work dir pathname of output fits file (default is.fits)
+        :return: results object, also accessible as `DPRunner.SUbstar_result` property
+        """
         self._get_ready_for_commands()  # wait for completion before changes in working dir
-        if subtracted_image is None:
-            self.rm_from_working_dir(fname.SUBTRACTED_IMAGE_FILE)
-
-        self.rm_from_working_dir(fname.NEI_FILE)
-        self.rm_from_working_dir(fname.ERR_FILE)
-        photometry_file = self.expand_default_file_path(photometry_file)
-        psf_stars_file = self.expand_default_file_path(psf_stars_file)
-        psf_file = self.expand_default_file_path(psf_file)
-        commands = 'PSF\n{}\n{}\n{}\n'.format(
-            photometry_file,
-            psf_stars_file,
-            psf_file
-        )
-        processor = DpOp_PSf()
+        subtracted_image = self._prepare_output_file(subtracted_image)
+        subtract = self._prepare_input_file(subtract)
+        if leave_in:
+            leave_in = self._prepare_input_file(leave_in)
+        psf_file = self._prepare_input_file(psf_file)
+        subtracted_image = self._prepare_output_file(subtracted_image)
+        if leave_in:
+            commands = 'SUB\n{}\n{}\ny\n{}\n{}\n'.format(
+                psf_file,
+                subtract,
+                leave_in,
+                subtracted_image
+            )
+        else:
+            commands = 'SUB\n{}\n{}\nn\n{}\n'.format(
+                psf_file,
+                subtract,
+                subtracted_image
+            )
+        processor = DpOp_SUbstar()
         self._insert_processing_step(commands, output_processor=processor)
-        self.PSf_result = processor
+        self.SUbstar_result = processor
         return processor
 
     def _process_starlist(self, s, **kwargs):
