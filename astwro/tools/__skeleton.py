@@ -29,11 +29,14 @@ def __arg_parser():
 
 
 # Below: standard skeleton for astwro.tools
+# CUSTOMIZE:
+#   1. customize postional - obligatory arguments
+#   2. decide whether to print results (__do return)
 
-def main(**kwargs):
+def main(positional1, positional2, **kwargs):
     """Entry point for python script calls. Parameters identical to command line"""
     # Extract default arguments from command line parser and apply kwargs parameters
-    args = commons.bunch_kwargs(__arg_parser(), **kwargs)
+    args = commons.bunch_kwargs(__arg_parser(), positional=[positional1, positional2], **kwargs)
     # call main routine - common form command line and python calls
     return __do(args)
 
@@ -45,4 +48,4 @@ def info():
 if __name__ == '__main__':
     # Entry point for command line
     __args = __arg_parser().parse_args()  # parse command line arguments
-    __do(__args)  # call main routine - common form command line and python calls
+    print(__do(__args))  # call main routine - common form command line and python calls
