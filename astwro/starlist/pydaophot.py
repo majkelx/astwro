@@ -7,5 +7,7 @@ def from_daophot_runner(dp):
     :return:
     :rtype: StarList
     """
+    #TODO implement
+    raise NotImplementedError()
 
 

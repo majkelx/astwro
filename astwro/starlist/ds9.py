@@ -7,8 +7,15 @@ import re
 _ds9_regexp = re.compile(r'[+-]? *circle[( ] *([+-]?\d+[.]?\d*) *[, ] *([+-]?\d+[.]?\d*).+#.*id *= *(\d+)')
 
 
-def read_ds9_regions(filename):
-    f, to_close = get_stream(filename, 'rt')
+def read_ds9_regions(file):
+    # type: (object) -> StarList
+    """
+    Reads ds9 region
+    :param file: filename or open input stream
+    :return: StarList object
+    """
+
+    f, to_close = get_stream(file, 'rt')
     # s = StarList.new()
     data = []
     dao_hdr1 = None

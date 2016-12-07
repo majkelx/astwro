@@ -168,6 +168,15 @@ class DPRunner(DAORunner):
         :return: results object also accessible as `DPRunner.PHotometry_result` property
         :rtype: DpOp_PHotometry
         """
+        # TODO: When PSF file is found, new daophot uses it and behaves differently,
+        # TODO: this should be implemented as an optional parameter,
+        # TODO: and not using same name for FITS and PSF by default (avoid finding PSF)
+        # TODO: session:
+        #           Found PSF file mik.psf
+        #       Profile-fitting photometry (default mik.nst): mik.als
+        #                     Star ID file (default mik.lst): mik.coo
+        #                       Output file (default mik.ap): mik2.ap
+
         self._get_ready_for_commands()  # wait for completion before changes in working dir
         if photometry_file is None:
             self.rm_from_working_dir(fname.PHOTOMETRY_FILE)

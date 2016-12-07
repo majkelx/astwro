@@ -6,6 +6,7 @@ from collections import namedtuple
 
 class DAO(object):
     FType = namedtuple('DAOFileType', ['columns', 'extension', 'NL'])
+    CType = namedtuple('DAOColumnType', ['name', 'format', 'NaN'])
     UNKNOWN_FILE = FType(
         columns   = ['id'] + range(1, 100),  # id then unknown columns
         extension = '.txt',
@@ -36,17 +37,22 @@ class DAO(object):
         extension = '.als',
         NL = 1,
     )
+    SHORT_FILE = FType(   # Filetype for all_stars files in Bialkow workflow
+        columns=['id', 'x', 'y', 'mag_rel_psf', 'mag_rel_psf_err'],
+        extension='.all_stars',
+        NL=1,
+    )
 
-    formats = {
-        'id': '{:7.0f}',
-        'mag_rel_psf': '{:9.4f}',
-        'mag_rel_psf_err': '{:9.4f}',
-        'psf_iter': '{:9.1f}',
+    columns = {
+        '_default':     CType('_default', '{:9.3f}', -9.999),
+        'id':           CType('id', '{:7.0f}', -1),
+        'mag_rel_psf':  CType('mag_rel_psf', '{:9.4f}', -9.999),
+        'mag_rel_psf_err':  CType('mag_rel_psf_err', '{:9.4f}', -9.999),
+        'psf_iter':     CType('psf_iter', '{:9.1f}', -9.999),
     }
 
 DAO_file_firstline = ' NL    NX    NY  LOWBAD HIGHBAD  THRESH     AP1  PH/ADU  RNOISE    FRAD'
 
-__NaN = '-9.999'   # if there will be need to implement more NaN formats, add them into DAO types/column
 
 def read_dao_file(file, dao_type = None):
     """
@@ -60,7 +66,7 @@ def read_dao_file(file, dao_type = None):
                     - DAO.LST_FILE
                     - DAO.NEI_FILE
                     - DAO.ALS_FILE
-                If missing extension of file will be used to determine file type
+                If missing filename extension will be used to determine file type
                 if file is provided as filename
     :return: StarList instance
     """
@@ -138,13 +144,12 @@ def _write_table(starlist, file, columns):
             val = i if col == 'id' else row.get(col)
             if val is None: # not all columns exist in StarList, do not write rest of them
                 break
+            coltype = DAO.columns.get(col)
+            if not coltype:
+                coltype = DAO.columns['_default']
             if pd.isnull(val):
-                fmt = __NaN
-            else:
-                fmt = DAO.formats.get(col)
-                if not fmt:
-                    fmt = '{:9.3f}'
-            file.write(fmt.format(val))
+                val = coltype.NaN
+            file.write(coltype.format.format(val))
         file.write('\n')
 
 
@@ -197,13 +202,14 @@ def parse_dao_hdr(hdr, val, line_prefix=''):
 
 
 def _parse_table(f, hdr, type):
-    df = pd.read_table(f, header=None, sep='\s+', na_values=__NaN, index_col=0)
+    df = pd.read_table(f, header=None, sep='\s+', na_values=[DAO.columns['_default'].NaN], index_col=0)
     df.insert(0, 'id', df.index.to_series())
     if type is None:
         type = _guess_filetype(hdr, df)
     if type == DAO.AP_FILE:
         raise NotImplementedError()
     df.columns = type.columns[:df.columns.size]
+    # TODO: implement per column search for NaN
     return StarList(df)
 
 
@@ -218,6 +224,8 @@ def _guess_filetype(header, table):
                 type = DAO.COO_FILE
             elif colno == 9:
                 type = DAO.ALS_FILE
+            elif colno == 5:
+                type = DAO.SHORT_FILE
         elif NL == 2:
             type = DAO.AP_FILE
         elif NL == 3:
