@@ -23,7 +23,7 @@ from deap import tools
 
 import __commons as commons
 import astwro.starlist as sl
-import astwro.pydaophot2 as dao
+import astwro.pydaophot as dao
 import astwro.tools
 import astwro.utils as utils
 
