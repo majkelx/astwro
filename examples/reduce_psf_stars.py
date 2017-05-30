@@ -44,20 +44,20 @@ if not os.path.isfile(coo):
     dp.FInd(1,1)
     assert (not os.path.isfile(ap) and not os.path.isfile(lst))
 else:
-    dp.copy_to_working_dir(coo, fname.COO_FILE)
+    dp.copy_to_runner_dir(coo, fname.COO_FILE)
 
 # PH needed?
 if not os.path.isfile(ap):
     dp.PHotometry()
     assert (not os.path.isfile(lst))
 else:
-    dp.copy_to_working_dir(ap, fname.AP_FILE)
+    dp.copy_to_runner_dir(ap, fname.AP_FILE)
 
 # PI needed?
 if not os.path.isfile(lst):
     dp.PIck(pick_candidates, faintest_mag=pick_mag_limit)
 else:
-    dp.copy_to_working_dir(lst, fname.LST_FILE)
+    dp.copy_to_runner_dir(lst, fname.LST_FILE)
 
 # run tasks list
 dp.run(wait=True)
@@ -102,8 +102,8 @@ while winner_score < prev_winner_score:
     # measure results and chose the best
     scores = np.zeros_like(population)
     for i, d in enumerate(population):
-        conv_stars = read_dao_file(d.file_from_working_dir(fname.ALS_FILE))
-        psf_stars = read_dao_file(d.file_from_working_dir(fname.LST_FILE))
+        conv_stars = read_dao_file(d.file_from_runner_dir(fname.ALS_FILE))
+        psf_stars = read_dao_file(d.file_from_runner_dir(fname.LST_FILE))
         result = {
             'n': len(log),
             'conv_stars': len(conv_stars), # converged by allstar
@@ -123,8 +123,8 @@ while winner_score < prev_winner_score:
     winner = population[max_scored]
     print ('Round winner scored {:f} after {:d} calculations')
 
-    winner.copy_from_working_dir(fname.LST_FILE, os.path.join(results_dir, 'round'))
-    winning_psf_stars = read_dao_file(winner.file_from_working_dir(fname.LST_FILE))
+    winner.copy_from_runner_dir(fname.LST_FILE, os.path.join(results_dir, 'round'))
+    winning_psf_stars = read_dao_file(winner.file_from_runner_dir(fname.LST_FILE))
 
     # now prepare next population
 #    population = [daophot(dir=winner.dir.clone()) for _ in ]

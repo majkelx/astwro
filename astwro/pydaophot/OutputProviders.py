@@ -1,5 +1,6 @@
 import re
 from logging import *
+from astwro.starlist import read_dao_file
 
 
 class AbstractOutputProvider(object):
@@ -15,11 +16,11 @@ class StreamKeeper(AbstractOutputProvider):
     runner = None
 
     def __init__(self, runner=None, stream=None):
+        super(StreamKeeper, self).__init__()
         self.stream = stream
         self.runner = runner
 
     def _get_output_stream(self):
-        self.runner.wait_for_results()
         if self.stream is None:
             raise Exception('No output stream available, call run() before collecting results.')
         return self.stream
@@ -30,11 +31,11 @@ class OutputProvider(AbstractOutputProvider):
         also can be used as dummy processor in chain"""
 
     # previous output provider
-    _prev_in_chain = None
-    __stream = None
 
     def __init__(self, prev_in_chain=None):
+        self.__stream = None
         self._prev_in_chain = prev_in_chain
+        self.logger = getLogger('ResultParser')
 
     def _consume(self, stream):
         """ to be overridden
@@ -62,10 +63,10 @@ class OutputLinesProcessor(OutputProvider):
         counter = 0
         for line in stream:
             counter += 1
-            debug("Output line %3d: %s", counter, line)
+            self.logger.debug("Output line %3d: %s", counter, line)
             last_one = self._process_line(line, counter)
             if last_one:
-                debug("Was last line")
+                self.logger.debug("Was last line")
                 return
 
 
@@ -93,7 +94,7 @@ class OutputBufferedProcessor(OutputLinesProcessor):
 
     def get_buffer(self):
         self._get_output_stream()  # tigers processing
-        debug("Buffer of output obtained: " + self.__buffer)
+        self.logger.debug("Buffer of output obtained: " + self.__buffer)
         return self.__buffer
 
 # Daophot regexps:
@@ -168,7 +169,10 @@ class DPOP_OPtion(DaophotCommandOutputProcessor):
         _ = self.options
 
 class DpOp_FInd(DaophotCommandOutputProcessor):
-    __data = None
+    def __init__(self, prev_in_chain=None, starlist_file=None):
+        self.__data = None
+        self.starlist_file = starlist_file
+        super(DpOp_FInd, self).__init__(prev_in_chain=prev_in_chain)
 
     @property
     def data(self):
@@ -186,7 +190,8 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
         return float(self.data[0])
 
     @property
-    def stddev(self):
+    def skydev(self):
+        """Standart deviation of :var sky"""
         return float(self.data[1])
 
     @property
@@ -215,7 +220,12 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
         return self.data[7]
 
 class DpOp_PHotometry(DaophotCommandOutputProcessor):
-    __data = None
+
+    def __init__(self, prev_in_chain=None, photometry_file=None):
+        self.__data = None
+        self.__starlist = None
+        self.photometry_file = photometry_file
+        super(DpOp_PHotometry, self).__init__(prev_in_chain=prev_in_chain)
 
     @property
     def data(self):
@@ -236,8 +246,19 @@ class DpOp_PHotometry(DaophotCommandOutputProcessor):
     def mag_err(self):
         return float(self.data[1])
 
+    @property
+    def starlist(self):
+        if self.__starlist is None and self.photometry_file:
+            self.__starlist = read_dao_file(self.photometry_file)
+        return self.__starlist
+
+
 class DpOp_PIck(DaophotCommandOutputProcessor):
-    __stars = None
+
+    def __init__(self, prev_in_chain=None, picked_stars_file=None):
+        self.__stars = None
+        self.picked_stars_file = picked_stars_file
+        super(DpOp_PIck, self).__init__(prev_in_chain=prev_in_chain)
 
     @property
     def stars(self):
@@ -252,8 +273,13 @@ class DpOp_PIck(DaophotCommandOutputProcessor):
 
 
 class DpOp_PSf(DaophotCommandOutputProcessor):
-    __data = None
-    __errors = None
+    def __init__(self, prev_in_chain=None, psf_file=None, nei_file=None, err_file=None):
+        self.__data = None
+        self.__errors = None
+        self.psf_file = psf_file
+        self.nei_file = nei_file
+        self.err_file = err_file
+        super(DpOp_PSf, self).__init__(prev_in_chain=prev_in_chain)
 
     @property
     def converged(self):
@@ -295,6 +321,11 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
 class DpOp_SUbstar(OutputBufferedProcessor):
     pass
 
+
+class DpOp_SOrt(OutputBufferedProcessor):
+    pass
+
+
 class AsOp_opt(OutputBufferedProcessor):
     __options = None
 
@@ -321,9 +352,24 @@ class AsOp_opt(OutputBufferedProcessor):
         _ = self.options
 
 class AsOp_result(OutputBufferedProcessor):
-    __stars = None
+    def __init__(self, prev_in_chain=None, profile_photometry_file=None, subtracted_image_file=None):
+        self.__stars = None
+        self.__als_stars = None
+        self.profile_photometry_file = profile_photometry_file
+        self.subtracted_image_file = subtracted_image_file
+        super(AsOp_result, self).__init__(prev_in_chain=prev_in_chain)
+
     def _is_last_one(self, line, counter):
         return False
+
+    @property
+    def als_stars(self):
+        """returns StarList of stars with profile photometry results"""
+        if not self.__als_stars:
+            if self.profile_photometry_file:
+                self.__als_stars = read_dao_file(self.profile_photometry_file)
+        return self.__als_stars;
+
 
     @property
     def stars_no(self):

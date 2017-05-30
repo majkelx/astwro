@@ -22,14 +22,14 @@ def main(**kwargs):
     # 1 do daophot aperture and psf photometry and run allstar
 
     dp = daophot(image_file=kwargs.image)
-    dp.copy_to_working_dir(kwargs.coo, fname.COO_FILE)
+    dp.copy_to_runner_dir(kwargs.coo, fname.COO_FILE)
     dp.PHotometry()
-    dp.copy_to_working_dir(kwargs.lst, fname.LST_FILE)
+    dp.copy_to_runner_dir(kwargs.lst, fname.LST_FILE)
     dp.PSf()
     dp.run(wait=True)
     al = allstar(dp.dir)
     al.run()
-    all_s = read_dao_file(al.file_from_working_dir(fname.ALS_FILE))
+    all_s = read_dao_file(al.file_from_runner_dir(fname.ALS_FILE))
     print(sigmaclip(all_s.psf_chi)[0].mean())
     all_s.hist('psf_chi')
 

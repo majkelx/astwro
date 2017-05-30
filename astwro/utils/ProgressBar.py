@@ -7,15 +7,16 @@ import sys
 
 
 class ProgressBar(object):
-    def __init__(self, total=100, prefix='', suffix='', decimals=1, bar_length=20, step=0):
+    def __init__(self, total=100, prefix='', suffix='', decimals=1, bar_length=20, step=0, cleanup=True):
         """
-        Create terminal progress bar indicator
+        Create terminal progress bar 
         :param int total: total iterations (Int)
         :param str prefix: prefix string (Str)
         :param str suffix: suffix string (Str)
         :param int decimals: positive number of decimals in percent complete (Int)
         :param int bar_length: character length of bar (Int)
         :param int step: allows automatic progress increasing on parameter-less print_progress call
+        :param bool cleanup: if true (default) erase progressbar when completed 
         """
         self.total = total
         self.prefix = prefix
@@ -24,12 +25,13 @@ class ProgressBar(object):
         self.bar_length = bar_length
         self.step = step
         self.iteration = 0
+        self.cleanup = cleanup
 
     def print_progress(self, iteration=None):
         """
         Call in a loop to print terminal progress bar
         @params:
-            iteration   - Required  : current iteration (Int)
+            iteration 
         """
         if iteration is None:
             iteration = self.iteration + self.step
@@ -43,6 +45,15 @@ class ProgressBar(object):
         stream.flush()
         stream.write('\r%s [%s] %s%s %s' % (self.prefix, bar, percents, '%', self.suffix)),
         if iteration == self.total:
-            stream.write('\n')
+            if self.cleanup:
+                self.clean_progress()
+            else:
+                stream.write('\n')
             stream.flush()
         self.iteration = iteration
+
+    def clean_progress(self):
+        n = len(self.prefix) + len(self.suffix) + self.bar_length + self.decimals + 10
+        stream = sys.stderr
+        stream.flush()
+        stream.write('\r' + ' '*n + '\r'),

@@ -1,30 +1,23 @@
+# coding=utf-8
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import os
+import tempfile
+import random
+from collections import namedtuple
 from .Runner import Runner
+import astwro.starlist as sl
 
-
-class fname:
-    """ filenames in temp work dir """
-    DAOPHOT_OPT = 'daophot.opt'
-    PHOTO_OPT = 'photo.opt'
-    ALLSTAR_OPT = APERTURES_FILE = 'allstar.opt'
-    IMAGE_FILE = FITS_FILE = 'i.fits'
-    FOUNDSTARS_FILE = COO_FILE = 'i.coo'
-    PHOTOMETRY_FILE = AP_FILE = 'i.ap'
-    PSF_STARS_FILE = LST_FILE ='i.lst'
-    NEIGHBOURS_FILE = NEI_FILE = 'i.nei'
-    ERR_FILE = 'i.err'
-    PSF_FILE = 'i.psf'
-    ALLSTARS_FILE = ALS_FILE = 'i.als'
-    SUBTRACTED_IMAGE_FILE = SUB_FILE = 'is.fits'
 
 class DAORunner(Runner):
     """base for daophot package runners runner"""
 
-    def __init__(self, config=None, dir=None):
-        Runner.__init__(self, config=config, dir=dir)
+    def __init__(self, dir=None, batch=False):
+        super(DAORunner, self).__init__(dir=dir, batch=batch)
 
     def __deepcopy__(self, memo):
-        return Runner.__deepcopy__(self, memo)
+        return super(DAORunner, self).__deepcopy__(memo)
 
     # dao files management
     def apertures_file_push(self, src_path):
@@ -33,7 +26,7 @@ class DAORunner(Runner):
         :param str src_path: patch to src file
         :rtype: None
         """
-        self.copy_to_working_dir(src_path, fname.PHOTO_OPT)
+        self.copy_to_runner_dir(src_path, 'photo.opt')
 
     def apertures_file_pull(self, dst_path = '.'):
         """
@@ -41,7 +34,7 @@ class DAORunner(Runner):
         :param dst_path: destination
         :rtype: None
         """
-        self.copy_from_working_dir(fname.PHOTO_OPT, dst_path)
+        self.copy_from_runner_dir('photo.opt', dst_path)
 
     def apertures_file_create(self, apertures, IS, OS):
         """
@@ -52,22 +45,44 @@ class DAORunner(Runner):
         :rtype: None
         """
         assert len(apertures) > 0 and len(apertures) < 13
-        self.rm_from_working_dir(fname.PHOTO_OPT)
-        with open(os.path.join(self.dir, fname.PHOTO_OPT), 'w') as f:
+        self.rm_from_runner_dir('photo.opt')
+        with open(os.path.join(self.dir, 'photo.opt'), 'w') as f:
             f.write(''.join('A{:1X}={:.2f}\n'.format(n+1, v) for n,v in zip(range(len(apertures)), apertures)))
             f.write('IS={:.2f}'.format(IS))
             f.write('OS={:.2f}'.format(OS))
 
-    def get_stars(self, file, **kwargs):
+    def read_starlist(self, filepath, **kwargs):
+        # type: ([str], []) -> sl.StarList
         """
         Returns `StarList` object with stars extracted from daophot files
-        :param str fname: source file for starlist, use 'fname' constants eg: s = dp.get_stars(fname.PSF_STARS_FILE)
-        :param kwargs: additional parameters for extra processing in subclasses e.g. add_psf_errors=True
-        :rtype: StarList
+        :param [str] filepath: source file for starlist, if filename without path is provided, runner directory is assumed.
+        :param  kwargs: additional parameters for extra processing in subclasses e.g. add_psf_errors=True
+        :rtype: starlist.StarList
         """
-        from astwro.starlist import read_dao_file
-        s = read_dao_file(self.file_from_working_dir(file))
+        s = sl.read_dao_file(self.absolute_path(filepath))
         return self._process_starlist(s, **kwargs)
+
+    def write_starlist(self, stars, filename=None, dao_file_type=sl.DAO.UNKNOWN_FILE):
+        # type: (sl.StarList, [str], namedtuple) -> str
+        """
+        Writes `StarList` object to file in runner directory 
+        :param  sl.StarList stars: star list to be written
+        :param  filename: name of file in runner directory, default: random name with extension '.stars'
+        :return name of file in runner directory
+        """
+        if filename is None:
+            filename = self._runner_dir_file_name(signature=random.random(), suffix=dao_file_type.extension)
+        sl.write_dao_file(stars, os.path.join(str(self.dir), filename), dao_type=dao_file_type)
+        return filename
+
+
+    def _prepare_input_file(self, data):
+        # check if input has a form of StarList
+        if isinstance(data, sl.StarList):
+            #TODO: provide file types and/or extensions?
+            data = self.write_starlist(data)
+        return super(DAORunner, self)._prepare_input_file(data)
 
     def _process_starlist(self, s, **kwargs):
         return s
+

@@ -19,7 +19,7 @@ for i in range(0):
     dphot2 = daophot()
     dphot1.ATtach(fits_image())
     dphot2.ATtach(fits_image())
-    dphot2.OPtion('FITTING', 5.5)
+    dphot2.OPtions('FITTING', 5.5)
     dphot1.FInd(1,1)
     dphot2.FInd(1,1)
     dphot1.PHotometry()
@@ -33,7 +33,7 @@ for i in range(0):
     print (dphot1.FInd_result.stras, dphot1.PHotometry_result.mag_limit)
     print ('Pick found: {} stars'.format(dphot1.PIck_result.get_stars()))
     dphot2.FInd_result.data()
-    dphot2.copy_from_working_dir(fname.FOUNDSTARS_FILE, '/tmp/dupa.coo')
+    dphot2.copy_from_runner_dir(fname.FOUNDSTARS_FILE, '/tmp/dupa.coo')
 #    dphot.EXit(True)
     dphot1.close()
     dphot2.close()
@@ -50,7 +50,7 @@ d.PIck()
 psf_radius = [18,20,22,24]
 dphots = [d.clone() for _ in psf_radius]
 for dp, ps in zip(dphots, psf_radius):
-    dp.OPtion('PSF', ps)
+    dp.OPtions('PSF', ps)
     dp.PSf()
 
 
@@ -73,9 +73,9 @@ for als in allstars:
 for als, ps in zip(allstars, psf_radius):
     als.wait_for_results()  # file operations doesnt wait for completion (as ..._result.get_XXX do)
     if create_subtracted:
-        als.link_from_working_dir(fname.SUBTRACTED_IMAGE_FILE, "i-psf-{}.sub.fits".format(ps))
+        als.link_from_runner_dir(fname.SUBTRACTED_IMAGE_FILE, "i-psf-{}.sub.fits".format(ps))
     else:
-        als.copy_from_working_dir(fname.ALS_FILE, "i-psf-{}.als".format(ps))
+        als.copy_from_runner_dir(fname.ALS_FILE, "i-psf-{}.als".format(ps))
 
 # get some files from last one
 #als.
@@ -94,14 +94,14 @@ for als in allstars:
 #
 # from copy import *
 #
-# dphot.copy_from_working_dir(fname.FOUNDSTARS_FILE)
-# dphot.copy_from_working_dir(fname.PHOTOMETRY_FILE)
-# dphot.copy_from_working_dir(fname.PSF_STARS_FILE)
-# #dphot.copy_from_working_dir(fname.NEIGHBOURS_FILE)
+# dphot.copy_from_runner_dir(fname.FOUNDSTARS_FILE)
+# dphot.copy_from_runner_dir(fname.PHOTOMETRY_FILE)
+# dphot.copy_from_runner_dir(fname.PSF_STARS_FILE)
+# #dphot.copy_from_runner_dir(fname.NEIGHBOURS_FILE)
 
 # als = allstar(dir=dphot.dir, create_subtracted_image=True)
 # als.run(wait=True)
-# als.copy_from_working_dir(fname.SUBTRACTED_IMAGE_FILE)
+# als.copy_from_runner_dir(fname.SUBTRACTED_IMAGE_FILE)
 # print "Stars Allstars: {}".format(als.result.stars_no)
 
 # dphot.close()

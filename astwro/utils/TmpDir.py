@@ -1,3 +1,7 @@
+# coding=utf-8
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import shutil
 from tempfile import mkdtemp
 from copy import deepcopy
@@ -36,7 +40,7 @@ class TmpDir(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type_, value, traceback):
         self._rm_dir()
 
     def __repr__(self):
@@ -62,5 +66,5 @@ class TmpDir(object):
         if self.dir_is_tmp:
             try:
                 shutil.rmtree(self.path)
-            except OSError as ex:
+            except OSError:
                 pass

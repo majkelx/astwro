@@ -1,6 +1,9 @@
+import os
+
 def get_stream(file, mode):
     to_close = []
     if isinstance(file, str):
+        file = os.path.expanduser(file)
         f = open(file, mode)
         to_close.append(f)
     else:
