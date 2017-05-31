@@ -62,7 +62,7 @@ class DAORunner(Runner):
         s = sl.read_dao_file(self.absolute_path(filepath))
         return self._process_starlist(s, **kwargs)
 
-    def write_starlist(self, stars, filename=None, dao_file_type=sl.DAO.UNKNOWN_FILE):
+    def write_starlist(self, stars, filename=None, dao_file_type=None):
         # type: (sl.StarList, [str], namedtuple) -> str
         """
         Writes `StarList` object to file in runner directory 
@@ -71,7 +71,8 @@ class DAORunner(Runner):
         :return name of file in runner directory
         """
         if filename is None:
-            filename = self._runner_dir_file_name(signature=random.random(), suffix=dao_file_type.extension)
+            ext = dao_file_type.extension if dao_file_type else '.stars'
+            filename = self._runner_dir_file_name(signature=random.random(), suffix=ext)
         sl.write_dao_file(stars, os.path.join(str(self.dir), filename), dao_type=dao_file_type)
         return filename
 

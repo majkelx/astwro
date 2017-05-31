@@ -30,16 +30,16 @@ class Daophot(DAORunner):
     :var DpOp_PSf         PSf_result:        results of command PSf
     :var DpOp_SOrt        SOrt_result:       results of command SOrt    (not implemented)
     :var DpOp_SUbstar     SUbstar_result:    results of command SUbstar 
-    :var str auto_attach:  image which will be automatically ATTACHed before every run
-    :var     auto_options: options which will be automatically added as OPTION command before every run,
+    :var str image:  image which will be automatically ATTACHed before every run
+    :var     options: options which will be automatically added as OPTION command before every run,
                     can be either:
                                 dictionary:
                                                         >>> dp = Daophot()
-                                                        >>> dp.auto_options = {'GAIN': 9, 'FI': '6.0'}
+                                                        >>> dp.options = {'GAIN': 9, 'FI': '6.0'}
                                 iterable of tuples:
-                                                        >>> dp.auto_options = [('GA', 9.0), ('FITTING RADIUS', '6.0')]
+                                                        >>> dp.options = [('GA', 9.0), ('FITTING RADIUS', '6.0')]
                                 filename string of daophot.opt-formatted file:
-                                                        >>> dp.auto_options = 'config/pydaophot.opt'
+                                                        >>> dp.options = 'config/pydaophot.opt'
     """
 
     def __init__(self, dir=None, image=None, daophotopt=None, options=None, batch=False):
@@ -48,11 +48,11 @@ class Daophot(DAORunner):
         :param [str] dir:          pathname or TmpDir object - working directory for daophot,
                                    if None temp dir will be used and deleted on `Daophot.close()`
         :param [str] image:        if provided this file will be automatically attached (AT) as first daophot command
-                                   setting auto_attach property has same effect
+                                   setting image property has same effect
         :param [str] daophotopt:   daophot.opt file, if None build in default file will be used, can be added later
                                    by `Runner.copy_to_runner_dir(file, 'daophot.opt')`
         :param [list,dict] options: if provided OPTION command will be automatically attached
-                                   setting auto_options property has same effect; list of tuples or dict
+                                   setting options property has same effect; list of tuples or dict
         :param bool batch:         whether Daophot have to work in batch mode. 
         """
         if daophotopt is not None:
@@ -60,8 +60,10 @@ class Daophot(DAORunner):
         else:
             self.daophotopt = find_opt_file('daophot.opt')
 
-        self.auto_attach = image
-        self.auto_options = options
+        self.image = image
+        self.options = {}
+        if options:
+            self.options.update(dict(options))
 
         super(Daophot, self).__init__(dir=dir, batch=batch)
         # base implementation of __init__ calls `_reset` also
@@ -95,16 +97,16 @@ class Daophot(DAORunner):
         # new.SOrt_result = deepcopy(self.SOrt_result, memo)
         # new.SUbstar_result = deepcopy(self.SUbstar_result, memo)
 
-        new.auto_attach = deepcopy(self.auto_attach, memo)
-        new.auto_options = deepcopy(self.auto_options, memo)
+        new.image = deepcopy(self.image, memo)
+        new.options = deepcopy(self.options, memo)
         return new
 
     def _pre_run(self, wait):
         super(Daophot, self)._pre_run(wait)
-        if self.auto_options:
-            self._enqueueOPtions(self.auto_options, on_beginning=True)
-        if self.auto_attach:
-            self._equeueATtach(self.auto_attach, on_beginning=True)
+        if self.options:
+            self._enqueueOPtions(self.options, on_beginning=True)
+        if self.image:
+            self._equeueATtach(self.image, on_beginning=True)
 
         # just for consume options daophot presents on the beginning
         opt_processor = DPOP_OPtion()
@@ -132,6 +134,29 @@ class Daophot(DAORunner):
             self.ATtach_result = processor
         return processor
 
+    def set_options(self, options, value=None):
+        # type: ([str,dict,list], [str,float]) -> None
+        """set option(s) before run. options can be either:
+                dictionary:             `dp.OPtion({'GAIN': 9, 'FI': '6.0'})`
+                iterable of tuples:     `dp.OPtion([('GA', 9.0), ('FITTING RADIUS', '6.0')])`
+                option key, followed by value in 'value' parameter:
+                                        `dp.OPtion('GA', 9.0)`
+                filename string of allstar.opt-formatted file (file will be symlinked as `allstar.opt`):
+                                        `dp.OPtion('opts/newallstar.opt')`
+                """
+        if isinstance(options, str) and value is None:  # filename
+            # allstar operates in his tmp dir and has limited buffer for file path
+            # so symlink file to its working dir
+            self.link_to_runner_dir(options, 'daophot.opt')
+        else:
+            if self.options is None:
+                self.options = {}
+            if value is not None:  # single value
+                options = {options:value}
+            elif isinstance(options, list):
+                options = dict(options)
+            self.options.update(options)
+
     # daophot commands
     def ATtach(self, image_file):
         # type: (str) -> DPOP_ATtach
@@ -146,7 +171,7 @@ class Daophot(DAORunner):
         :return: DPOP_ATtach instance for getting results: ATtach_result property
         """
         if not self.batch_mode:
-            raise Daophot.RunnerException('ATtach is intented for "batch" mode only. Use auto_attach property.')
+            raise Daophot.RunnerException('ATtach is intented for "batch" mode only. Use image property.')
 
         self._get_ready_for_commands()  # wait for completion before changes in working dir
 
@@ -185,6 +210,7 @@ class Daophot(DAORunner):
         # type: ([str, dict, list], [str]) -> DPOP_OPtion
         """
         Adds daophot OPTION command to execution queue. Available only in "batch" mode. 
+        Use :meth `set_options()` for options which are set after daophot process start
         :param options: can be either:
                 dictionary:
                                         >>> dp = Daophot(mode = "batch")
@@ -197,10 +223,10 @@ class Daophot(DAORunner):
                                         >>> dp.OPtions('config/pydaophot.opt')
         :param value: value if `options` is just single key
         :return: results object also accessible as `Daophot.OPtion_result` property
-        :rtype: DPOP_OPtion
+        :rtype: DPOP_OPtion  
         """
         if not self.batch_mode:
-            raise Daophot.RunnerException('OPtions is intented for "batch" mode only. Use auto_options property.')
+            raise Daophot.RunnerException('OPtions is intented for "batch" mode only. Use set_options().')
 
         self._get_ready_for_commands()  # wait for completion before changes in working dir
         return self._enqueueOPtions(options, value)
@@ -227,15 +253,16 @@ class Daophot(DAORunner):
             self.run()
         return processor
 
-    def PHotometry(self, photoopt=None, photo_is=0, photo_os=0, photo_ap=None, stars='i.coo', photometry_file='i.ap'):
+    def PHotometry(self, photoopt=None, IS=0, OS=0, apertures=None, stars='i.coo', photometry_file='i.ap'):
         # type: ([str], float, float, [list], [str,sl.StarList], [str]) -> DpOp_PHotometry
         """
         Runs (or adds to execution queue in batch mode) daophot PHOTOMETRY command. 
+        Either :param photoopt or :param photo_is, :param OS and :param photo_ap have to be set.
         :param [str] photoopt: photo.opt file to be used, default: none 
-                    (provide :param photo_is, :param photo_os and :param photo_ap)
-        :param float photo_is: inner sky radius, overwrites :param photoopt file value IS
-        :param float photo_os: outer sky radius, overwrites :param photoopt file value OS
-        :param [list] photo_ap: apertures radius, up to 12, overwrites :param photoopt file values A1, A2, ...
+                    (provide :param photo_is, :param OS and :param photo_ap)
+        :param float IS: inner sky radius, overwrites :param photoopt file value IS
+        :param float OS: outer sky radius, overwrites :param photoopt file value OS
+        :param [list] apertures: apertures radius, up to 12, overwrites :param photoopt file values A1, A2, ...
         :param [str, sl.StarList] stars: input list of stars, default: i.coo 
         :param [str] photometry_file: output magnitudes file 
         :return: results object also accessible as `DPRunner.PHotometry_result` property
@@ -249,11 +276,12 @@ class Daophot(DAORunner):
         #       Profile-fitting photometry (default mik.nst): mik.als
         #                     Star ID file (default mik.lst): mik.coo
         #                       Output file (default mik.ap): mik2.ap
-
-        if photo_ap is None:
-            photo_ap = []
-        elif len(photo_ap) > 12:
-            raise Daophot.RunnerValueError('photo_ap apertures list can contain maximum 12 elements')
+        if photoopt is None and (apertures is None or IS==0 or OS==0):
+            raise Daophot.RunnerValueError('Apertures and IS and OS must be provided, explicitly or as photoopt file')
+        if apertures is None:
+            apertures = []
+        elif len(apertures) > 12:
+            raise Daophot.RunnerValueError('apertures apertures list can contain maximum 12 elements')
         self._get_ready_for_commands()  # wait for completion before changes in working dir
 
         l_popt, a_popt = self._prepare_input_file(photoopt)
@@ -261,11 +289,11 @@ class Daophot(DAORunner):
         l_phot, a_phot = self._prepare_output_file(photometry_file)
 
         commands = 'PHOT\n{}\n'.format(l_popt)
-        if photo_is != 0:
-            commands += 'IS={}\n'.format(photo_is)
-        if photo_os != 0:
-            commands += 'OS={}\n'.format(photo_os)
-        for i, ap in enumerate(photo_ap):
+        if IS != 0:
+            commands += 'IS={}\n'.format(IS)
+        if OS != 0:
+            commands += 'OS={}\n'.format(OS)
+        for i, ap in enumerate(apertures):
             commands += 'A{:X}={}\n'.format(i+1, ap)
         commands += '\n{}\n{}\n'.format(l_star, l_phot)
 
@@ -338,7 +366,8 @@ class Daophot(DAORunner):
 
     def SOrt(self, file, by, decreasing=None):
         """
-        Adds daophot SORT command to execution stack.
+        Adds daophot SORT command to execution stack. NOT IMPLEMENTED sorry
+        Use sorting capabilities of `StarList` and `StarList.renumber()`
         :param str file: fname.COO_FILE etc... any fname.*_FILE to sort
         :param by:  1-based column number, negative for descending order - daophot standard, or
                     one of 'id', 'x', 'y', 'mag'
@@ -373,24 +402,24 @@ class Daophot(DAORunner):
         :return: results object, also accessible as `DPRunner.SUbstar_result` property
         """
         self._get_ready_for_commands()  # wait for completion before changes in working dir
-        subtracted_image, _ = self._prepare_output_file(subtracted_image)
-        subtract, _ = self._prepare_input_file(subtract)
-        psf_file, _ = self._prepare_input_file(psf_file)
+        l_out, a_out = self._prepare_output_file(subtracted_image)
+        l_sub, a_sub = self._prepare_input_file(subtract)
+        l_psf, a_psf = self._prepare_input_file(psf_file)
         if leave_in:
-            leave_in, _ = self._prepare_input_file(leave_in)
+            l_lve, a_lve = self._prepare_input_file(leave_in)
             commands = 'SUB\n{}\n{}\ny\n{}\n{}\n'.format(
-                psf_file,
-                subtract,
-                leave_in,
-                subtracted_image
+                l_psf,
+                l_sub,
+                l_lve,
+                l_out
             )
         else:
             commands = 'SUB\n{}\n{}\nn\n{}\n'.format(
-                psf_file,
-                subtract,
-                subtracted_image
+                l_psf,
+                l_sub,
+                l_out
             )
-        processor = DpOp_SUbstar()
+        processor = DpOp_SUbstar(subtracted_image_file=a_out)
         self._insert_processing_step(commands, output_processor=processor)
         self.SUbstar_result = processor
         if not self.batch_mode:

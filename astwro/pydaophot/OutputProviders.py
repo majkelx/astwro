@@ -171,6 +171,7 @@ class DPOP_OPtion(DaophotCommandOutputProcessor):
 class DpOp_FInd(DaophotCommandOutputProcessor):
     def __init__(self, prev_in_chain=None, starlist_file=None):
         self.__data = None
+        self.__starlist = None
         self.starlist_file = starlist_file
         super(DpOp_FInd, self).__init__(prev_in_chain=prev_in_chain)
 
@@ -184,6 +185,12 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
                                 ' error (or regexp is wrong). Output buffer:\n ' + buf)
             self.__data = match.groups()
         return self.__data
+
+    @property
+    def found_starlist(self):
+        if self.__starlist is None and self.starlist_file:
+            self.__starlist = read_dao_file(self.starlist_file)
+        return self.__starlist
 
     @property
     def sky(self):
@@ -247,7 +254,7 @@ class DpOp_PHotometry(DaophotCommandOutputProcessor):
         return float(self.data[1])
 
     @property
-    def starlist(self):
+    def photometry_starlist(self):
         if self.__starlist is None and self.photometry_file:
             self.__starlist = read_dao_file(self.photometry_file)
         return self.__starlist
@@ -257,6 +264,7 @@ class DpOp_PIck(DaophotCommandOutputProcessor):
 
     def __init__(self, prev_in_chain=None, picked_stars_file=None):
         self.__stars = None
+        self.__starlist = None
         self.picked_stars_file = picked_stars_file
         super(DpOp_PIck, self).__init__(prev_in_chain=prev_in_chain)
 
@@ -270,6 +278,13 @@ class DpOp_PIck(DaophotCommandOutputProcessor):
                                 ' error (or regexp is wrong). Output buffer:\n ' + buf)
             self.__stars = int(match.group(1))
         return self.__stars
+
+    @property
+    def picked_starlist(self):
+        if self.__starlist is None and self.picked_stars_file:
+            self.__starlist = read_dao_file(self.picked_stars_file)
+        return self.__starlist
+
 
 
 class DpOp_PSf(DaophotCommandOutputProcessor):
@@ -319,7 +334,10 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
 
 
 class DpOp_SUbstar(OutputBufferedProcessor):
-    pass
+    def __init__(self, prev_in_chain=None, subtracted_image_file=None):
+        self.subtracted_image_file = subtracted_image_file
+        super(DpOp_SUbstar, self).__init__(prev_in_chain=prev_in_chain)
+
 
 
 class DpOp_SOrt(OutputBufferedProcessor):
@@ -365,10 +383,9 @@ class AsOp_result(OutputBufferedProcessor):
     @property
     def als_stars(self):
         """returns StarList of stars with profile photometry results"""
-        if not self.__als_stars:
-            if self.profile_photometry_file:
-                self.__als_stars = read_dao_file(self.profile_photometry_file)
-        return self.__als_stars;
+        if self.__als_stars is None and self.profile_photometry_file:
+            self.__als_stars = read_dao_file(self.profile_photometry_file)
+        return self.__als_stars
 
 
     @property

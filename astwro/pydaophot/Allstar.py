@@ -15,14 +15,14 @@ class Allstar(DAORunner):
     :var str allstaropt:   allstar.opt file to be copied into runner dir
     :var DPOP_OPtion  OPtion_result:     initial options reported by `allstar`
     :var DPOP_ATtach  ATtach_result:     results of command ATtach
-    :var str auto_attach:  image which will be automatically used if not provided in `ALlstars` command
-    :var dict auto_options: options which will be automatically set as OPTION command before every run,
+    :var str image:  image which will be automatically used if not provided in `ALlstars` command
+    :var dict options: options which will be automatically set as OPTION command before every run,
                     can be either:
                                 dictionary:
                                                         >>> dp = Allstar()
-                                                        >>> dp.auto_options = {'PROFILE ERROR': 5, 'FI': '6.0'}
+                                                        >>> dp.options = {'PROFILE ERROR': 5, 'FI': '6.0'}
                                 iterable of tuples:
-                                                        >>> dp.auto_options = [('PR', 5.0), ('FITTING RADIUS', 6.0)]
+                                                        >>> dp.options = [('PR', 5.0), ('FITTING RADIUS', 6.0)]
     """
 
     def __init__(self, dir=None, image=None, allstaropt=None, options=None, batch=False):
@@ -31,7 +31,7 @@ class Allstar(DAORunner):
         :param [str] dir:          pathname or TmpDir object - working directory for daophot,
                                    if None temp dir will be used and deleted on `Allstar.close()`
         :param [str] image:        if provided this file will be used if not provided in `ALlstars` command
-                                   setting auto_attach property has same effect
+                                   setting image property has same effect
         :param [str] allstaropt:   allstar.opt file, if None build in default file will be used, can be added later
                                    by `Runner.copy_to_runner_dir(file, 'allstar.opt')`
         :param [list,dict] options: if provided options will be set on beginning of each process
@@ -43,10 +43,10 @@ class Allstar(DAORunner):
         else:
             self.allstaropt = find_opt_file('allstar.opt')
 
-        self.auto_attach = image
-        self.auto_options = {'WA': 0}  # suppress animations
+        self.image = image
+        self.options = {'WA': 0}  # suppress animations
         if options:
-            self.auto_options.update(dict(options))
+            self.options.update(dict(options))
 
         super(Allstar, self).__init__(dir=dir, batch=batch)
         # base implementation of __init__ calls `_reset` also
@@ -67,8 +67,8 @@ class Allstar(DAORunner):
         # new.OPtion_result = deepcopy(self.OPtion_result, memo)
         # new.ALlstars_result = deepcopy(self.ALlstars_result, memo)
 
-        new.auto_attach = deepcopy(self.auto_attach, memo)
-        new.auto_options = deepcopy(self.auto_options, memo)
+        new.image = deepcopy(self.image, memo)
+        new.options = deepcopy(self.options, memo)
         return new
 
     def _pre_run(self, wait):
@@ -77,8 +77,8 @@ class Allstar(DAORunner):
         super(Allstar, self)._pre_run(wait)
         # set options, and prepare options parser
         commands = ''
-        if self.auto_options:  # set options before
-            options = self.auto_options
+        if self.options:  # set options before
+            options = self.options
             if isinstance(options, dict):
                 options = options.items()  # options is dict
             # else options is list of pairs
@@ -107,21 +107,21 @@ class Allstar(DAORunner):
             # so symlink file to its working dir
             self.link_to_runner_dir(options, 'allstar.opt')
         else:
-            if self.auto_options is None:
-                self.auto_options = {}
+            if self.options is None:
+                self.options = {}
             if value is not None:  # single value
-                options = {options,value}
+                options = {options:value}
             elif isinstance(options, list):
                 options = dict(options)
-            self.auto_options.update(options)
+            self.options.update(options)
 
-    def ALlstar(self, image_file=None, psf_file='i.psf', photometry='i.ap', profile_photometry_file='i.als', subtracted_image_file=None):
+    def ALlstar(self, image_file=None, psf_file='i.psf', stars='i.ap', profile_photometry_file='i.als', subtracted_image_file=None):
         # type: ([str], str, [str,object], str, str) -> AsOp_result
         """
         Runs (or adds to execution queue in batch mode) daophot PICK command. 
         :param [str] image_file: input image filepath, if None, one set in constructor or 'i.fits' will be used
         :param str psf_file: input file with psf from daophot PSF command
-        :param str photometry: input magnitudes file, e.g. from aperture photometry done by :func:`Daophot.PHotometry`.
+        :param str stars: input magnitudes file, e.g. from aperture photometry done by :func:`Daophot.PHotometry`.
         :param str profile_photometry_file: output file with aperture photometry results, default: i.als 
         :param str subtracted_image_file: output file with subtracted FITS image, default: do not generate image
         :return: results object also accessible as :var:`Allstar.ALlstars_result` property
@@ -130,13 +130,13 @@ class Allstar(DAORunner):
         self._get_ready_for_commands()  # wait for completion before changes in working dir
 
         if not image_file:
-            image_file = self.auto_attach
+            image_file = self.image
         if not image_file:
             image_file = 'i.fits'
 
         l_img, a_img = self._prepare_input_file(image_file)
         l_psf, a_psf = self._prepare_input_file(psf_file)
-        l_pht, a_pht = self._prepare_input_file(photometry)
+        l_pht, a_pht = self._prepare_input_file(stars)
         l_als, a_als = self._prepare_output_file(profile_photometry_file)
         l_sub, a_sub = self._prepare_output_file(subtracted_image_file)
 

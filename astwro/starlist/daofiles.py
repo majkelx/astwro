@@ -20,12 +20,12 @@ class DAO(object):
     )
     AP_FILE_ODD = FType(   # odd rows columns (used in read)
         columns   = ['id', 'x', 'y'] + ['A{:X}'.format(n) for n in range(1,13)],  # id,x,y,A1,A2,..,AC
-        extension = '.ap',
+        extension = '',
         NL = 2,
     )
     AP_FILE_EVEN = FType(  # even rows columns (used in read)
         columns   = ['sky', 'sky_err', 'sky_skew'] + ['A{:X}_err'.format(n) for n in range(1,13)],
-        extension='.ap',
+        extension='',
         NL=2,
     )
     AP_FILE = FType(  # (used in write)
@@ -61,19 +61,19 @@ class DAO(object):
     # when searching for column details, first lookup is for pair (filetype:FType.extension, column:str), if not found
     # lookup for column:str (column definition shared by file types), eventually for '_default'
     _static_columns = {
-        '_default':     CType('_default', '{:9.3f}', -9.999),
-        'id':           CType('id', '{:7.0f}', -1),
-        'mag_rel_psf':  CType('mag_rel_psf', '{:9.4f}', -9.999),
-        'mag_rel_psf_err':  CType('mag_rel_psf_err', '{:9.4f}', -9.999),
-        'psf_iter':     CType('psf_iter', '{:9.1f}', -9.999),
-        'sky_err':      CType('sky_err', '{:6.2f}', -9.99),
-        'sky_skew':     CType('sky_skew', '{:6.2f}', -9.99),
-        ('.ap', 'id'): CType('id', '\n{:7.0f}', -1),         # new linie in AP files
-        ('.ap', 'sky'): CType('sky', '\n{:14.3f}', -9.999),  # new linie in AP files
+        '_default':     CType('_default', '{:9.3f}', [-9.999]),
+        'id':           CType('id', '{:7.0f}', [0]),
+        'mag_rel_psf':  CType('mag_rel_psf', '{:9.4f}', [-9.999]),
+        'mag_rel_psf_err':  CType('mag_rel_psf_err', '{:9.4f}', [-9.999]),
+        'psf_iter':     CType('psf_iter', '{:9.1f}', [-9.999]),
+        'sky_err':      CType('sky_err', '{:6.2f}', [-9.99]),
+        'sky_skew':     CType('sky_skew', '{:6.2f}', [-9.99]),
+        ('.ap', 'id'): CType('id', '\n{:7.0f}', [0]),         # new linie in AP files
+        ('.ap', 'sky'): CType('sky', '\n{:14.3f}', [-9.999]),  # new linie in AP files
     }
     # add A0, A1,... and A0_err, A1_err,...
-    _apert_columns = dict([(col, CType(col, '{:9.3f}', 99.999)) for col in ('A{:X}'.format(i) for i in range(1,13))])
-    _ap_err_columns = dict([(col, CType(col, '{:8.4f}', 9.9999)) for col in ('A{:X}_err'.format(i) for i in range(1,13))])
+    _apert_columns = dict([(col, CType(col, '{:9.3f}', [99.999,-99.999])) for col in ('A{:X}'.format(i) for i in range(1,13))])
+    _ap_err_columns = dict([(col, CType(col, '{:8.4f}', [9.9999])) for col in ('A{:X}_err'.format(i) for i in range(1,13))])
     # dict union
     columns = dict(chain.from_iterable(d.items() for d in (_static_columns, _apert_columns, _ap_err_columns)))
 
@@ -99,7 +99,7 @@ def read_dao_file(file, dao_type = None):
     return _parse_file(file, dao_type)
 
 
-def write_dao_file(starlist, file, dao_type=DAO.UNKNOWN_FILE):
+def write_dao_file(starlist, file, dao_type=None):
     """
     Write StarList object into daophot  file.
     :rtype: None
@@ -114,6 +114,14 @@ def write_dao_file(starlist, file, dao_type=DAO.UNKNOWN_FILE):
                 If missing extension of file will be used to determine file type
                 if file is provided as filename
     """
+    if dao_type is None and isinstance(file, str): # guess file type from extension
+        _, ext = os.path.splitext(file)
+        types = [v for k, v in DAO.__dict__.items() if isinstance(v, DAO.FType) and v.extension == ext]
+        if types:
+            dao_type = types[0]
+    if dao_type is None:
+        dao_type = DAO.UNKNOWN_FILE
+
     _write_file(starlist, file, dao_type)
 
 def _get_col_type(file_ext, column):
@@ -181,7 +189,7 @@ def _write_table(starlist, file, dao_type):
                 continue
             coltype = _get_col_type(dao_type.extension, col)
             if pd.isnull(val):
-                val = coltype.NaN
+                val = coltype.NaN[0]
             file.write(coltype.format.format(val))
         file.write('\n')
 
@@ -234,12 +242,12 @@ def parse_dao_hdr(hdr, val, line_prefix=''):
     return dict(zip(hdr.split(), val.split()))
 
 
-def _parse_table(f, hdr, type):
-    df = pd.read_table(f, header=None, sep='\s+', index_col=0)
-    df.insert(0, 'id', df.index.to_series())
-    if type is None:
-        type = _guess_filetype(hdr, df)
-    if type == DAO.AP_FILE:  # two row per star format correction
+def _parse_table(f, hdr, dao_type):
+    df = pd.read_table(f, header=None, sep='\s+')  #, index_col=0)
+    #df.insert(0, 'id', df.index.to_series())
+    if dao_type is None:
+        dao_type = _guess_filetype(hdr, df)
+    if dao_type == DAO.AP_FILE:  # two row per star format correction
         odd = df.iloc[0::2]
         odd.columns = DAO.AP_FILE_ODD.columns[:odd.columns.size]
         even = df.iloc[1::2]
@@ -247,10 +255,14 @@ def _parse_table(f, hdr, type):
         even.index = odd.index
         df = odd.join(even, rsuffix='foo')
     else:
-        df.columns = type.columns[:df.columns.size]
+        df.columns = dao_type.columns[:df.columns.size]
+
+    df.id = df.id.astype(int)
+    df.index = df.id
+
     # find NaN
     for col in df.columns:
-        coltype = _get_col_type(type.extension, col)
+        coltype = _get_col_type(dao_type.extension, col)
         if coltype.NaN:
             df[col].replace(coltype.NaN, pd.np.nan, inplace=True)
     return StarList(df)

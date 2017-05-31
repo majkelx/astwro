@@ -208,9 +208,9 @@ attached image have to be set before each command execution.
 `ATtach` and `OPtions` methods enqueues `AT` and `OP` commands like any other
 command methods and are useless in `"normal"` mode.
 
-`auto_attach` and `auto_options`
+`image` and `options`
 --------------------------------
-When `auto_attach` or `auto_options` `Daophot` insurance properties are set
+When `image` or `options` `Daophot` insurance properties are set
 (explicite or by `image` and `options` attributes of constructor), appropriate
 `AT` and/or `OP` commands will be automatically added for execution on the
 beginning of every run. This is preferred method of setting image and options

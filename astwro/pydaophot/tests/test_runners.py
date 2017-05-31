@@ -43,7 +43,6 @@ class TestRunners(unittest.TestCase):
     def test_auto_attach_find_expl_run(self):
         d = daophot(self.image)
         d.FInd(1, 1)
-        d.run()
         self.assertGreater(d.FInd_result.stars, 0)
 
     def test_implicit_reset(self):

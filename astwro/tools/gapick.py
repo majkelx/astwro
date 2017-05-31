@@ -101,7 +101,7 @@ def eval_population(population, candidates, workers, show_progress):
                 worker['daophot'].wait_for_results()  # now wait before using results
                 active[i] = worker['daophot'].PSf_result.converged  # PSF is not always successful
                 if active[i]:
-                    worker['allstar'].ALlstar(photometry='als.ap')       # enqueue calculation
+                    worker['allstar'].ALlstar(stars='als.ap')       # enqueue calculation
                     worker['allstar'].run(wait=False)  # asynchronous / parallel
         # wait for allstar for workers and process results
         for i, worker in enumerate(workers):
@@ -196,9 +196,9 @@ def __do(arg):
         if not arg.photo_ap:
             arg.photo_ap = [8]
     photometry = dp.PHotometry(photoopt=arg.photo_opt,
-                               photo_is=arg.photo_is,
-                               photo_os=arg.photo_os,
-                               photo_ap=arg.photo_ap,
+                               IS=arg.photo_is,
+                               OS=arg.photo_os,
+                               apertures=arg.photo_ap,
                                stars=arg.all_stars_file)
 
     # pick PFS stars candidates
@@ -210,7 +210,7 @@ def __do(arg):
     dp.PSf()
 
     # all stars (filtering by photometry errors and magnitudes)
-    stars = photometry.starlist
+    stars = photometry.photometry_starlist
     count0 = stars.shape[0]
     stars = stars[stars.A1 < arg.max_ph_mag]
     count1 = stars.shape[0]
@@ -274,7 +274,7 @@ def __do(arg):
     for i in range(arg.parallel):
         d = dp.clone()       # clone previously used daophot
         d.batch_mode = True
-        a = dao.Allstar(dir=d.dir, image=d.auto_attach, batch=True)
+        a = dao.Allstar(dir=d.dir, image=d.image, batch=True)
         d.logger = workers_logger
         a.logger = workers_logger
         workers.append({'daophot': d, 'allstar': a})
