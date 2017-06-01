@@ -9,9 +9,6 @@ from .OutputProviders import *
 from .config import find_opt_file
 import astwro.starlist as sl
 
-
-# TODO: Zarządzanie listami gwiazd, poza plikami obiekty StarList - output providers
-
 class Daophot(DAORunner):
     """ `daophot` runner
 
