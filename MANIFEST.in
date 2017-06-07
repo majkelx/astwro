@@ -1,0 +1,8 @@
+# Include the license file
+include LICENSE
+
+# Include README
+recursive-include . README.rst
+
+# Include the data files
+recursive-include astwro/sampledata *

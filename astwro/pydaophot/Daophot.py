@@ -2,6 +2,9 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
+# TODO: implement NEDA
+# TODO: implement GROuP
+
 
 import os
 from .DAORunner import DAORunner
@@ -49,7 +52,8 @@ class Daophot(DAORunner):
         :param [str] daophotopt:   daophot.opt file, if None build in default file will be used, can be added later
                                    by `Runner.copy_to_runner_dir(file, 'daophot.opt')`
         :param [list,dict] options: if provided OPTION command will be automatically attached
-                                   setting options property has same effect; list of tuples or dict
+                                   setting options property has same effect; list of tuples or dict.
+                                   Do not set WATCH PROGRESS to sth else than -2
         :param bool batch:         whether Daophot have to work in batch mode. 
         """
         if daophotopt is not None:
@@ -58,7 +62,7 @@ class Daophot(DAORunner):
             self.daophotopt = find_opt_file('daophot.opt')
 
         self.image = image
-        self.options = {}
+        self.options = {'WA': -2}
         if options:
             self.options.update(dict(options))
 
@@ -140,6 +144,7 @@ class Daophot(DAORunner):
                                         `dp.OPtion('GA', 9.0)`
                 filename string of allstar.opt-formatted file (file will be symlinked as `allstar.opt`):
                                         `dp.OPtion('opts/newallstar.opt')`
+            Do not set WATCH PROGRESS to sth else than -2
                 """
         if isinstance(options, str) and value is None:  # filename
             # allstar operates in his tmp dir and has limited buffer for file path

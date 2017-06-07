@@ -26,7 +26,7 @@ Default configuration file is included in module:
 `[astwro path]/pydaophot/config/pydaophot.cfg`
 which can be used as template for user's own.
 
-  Default configuration -- default `pydaophot.cfg` file content::
+Default configuration -- default `pydaophot.cfg` file content::
 
     # Patches (optional) and names of executables
     [executables]
@@ -77,7 +77,7 @@ process working directory, following naming convention is used here:
   as obtained by `os.getcwd()`.
 
 Runner directory
------------------
+----------------
 Each `Daophot` [#]_ object maintains it's own working directory.
 If directory is not specified in constructor, temporary directory is created.
 
@@ -93,13 +93,10 @@ For all command methods (`FInd, PHotometry,`...) parameters referring to files
 follows rules described below. Understanding those rules is important especially to
 distinguish whether file in *runner directory* or another directory is addressed.
 
-  1. All filenames without *path* prefix, addresses files in *runner directory*.
-  2. Files with absolute path prefix (i.e. starting with `/`), are... absolute
-     addressed files as expected.
-  3. Files with relative (but not empty) path prefix, are relative to
-     *working directory*.
-  4. Files with patch prefix starting with `~` (tilde) are relative to user's home
-     directory.
+1 All filenames without *path* prefix, addresses files in *runner directory*.
+2 Files with absolute path prefix (i.e. starting with `/`), are... absolute addressed files as expected.
+3 Files with relative (but not empty) path prefix, are relative to *working directory*.
+4 Files with patch prefix starting with `~` (tilde) are relative to user's home directory.
 
 In other words, file pathnames are quite standard and reltive to script *working directory*, with exception than lack of
 path prefix indicates file in *runner directory*.
@@ -132,7 +129,9 @@ Note, that in batch mode, copying occurs after execution of all commands in queu
 using external file as an output to one command and input of further one. Usually everything should be OK, because
 filenames generated for *runner directory* are deterministic.
 
-In the following example::
+In the following example
+
+.. code:: python
 
     from astwro.pydaophot import Daophot
     from astwro.sampledata import fits_image
@@ -145,7 +144,9 @@ In the following example::
 
 `FInd` command instruct daophot to output into file `1b7afb3.my.coo` in  *runner directory*.
 `PHotometry` command will read file `1b7afb3.my.coo` from  *runner directory*. After all `1b7afb3.my.coo` will
-be copied into `~/my.coo`. But one it's easier to work on files inside *runner directory* explicitly::
+be copied into `~/my.coo`. But one it's easier to work on files inside *runner directory* explicitly:
+
+.. code:: python
 
     from astwro.pydaophot import Daophot
     from astwro.sampledata import fits_image
@@ -156,11 +157,15 @@ be copied into `~/my.coo`. But one it's easier to work on files inside *runner d
     d.run()
     d.copy_from_runner_dir('i.coo', '~/my.coo')
 
-User can also get patch to this file without copying::
+User can also get patch to this file without copying
+
+.. code:: python
 
     d.file_from_runner_dir('i.coo')
 
-or, without specifying names at all::
+or, without specifying names at all
+
+.. code:: python
 
     d.FInd_result.starlist_file
 
@@ -209,7 +214,7 @@ attached image have to be set before each command execution.
 command methods and are useless in `"normal"` mode.
 
 `image` and `options`
---------------------------------
+---------------------
 When `image` or `options` `Daophot` insurance properties are set
 (explicite or by `image` and `options` attributes of constructor), appropriate
 `AT` and/or `OP` commands will be automatically added for execution on the

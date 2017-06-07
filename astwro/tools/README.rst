@@ -1,6 +1,6 @@
-======
+============
 astwro.tools
-======
+============
 
 Astwro tools are python scripts, ready to use from command line.
 
@@ -10,4 +10,5 @@ All scripts can be also used as python modules (this is the reason they have ``p
 Each script exports ``main(**kwargs)`` function which
 exposes it's functionality. Also scripts exports ``info()`` function which returns usage string -- convenient
 way to find out script purpose and ``main()`` parameters for ones working with python interactively.
+
 

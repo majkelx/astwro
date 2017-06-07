@@ -61,8 +61,12 @@ def info():
     commons.info(__arg_parser())
 
 
-if __name__ == '__main__':
+def commandline_entry():
     # Entry point for command line
     __args = __arg_parser().parse_args()  # parse command line arguments
     n = __do(__args)  # call main routine - common form command line and python calls
-    exit(0 if n > 0 else 1)
+    return  0 if n > 0 else 1
+
+if __name__ == '__main__':
+    code = commandline_entry()
+    exit(code)

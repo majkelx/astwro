@@ -18,7 +18,7 @@ def version_string():
 
 
 def main_info():
-    return 'For use in script call main(**kwargs), with command line arguments as named arguments'
+    return 'For use from python call main function foo(**kwargs), with command line arguments as named arguments'
 
 
 def info(parser):

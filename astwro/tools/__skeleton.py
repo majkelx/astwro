@@ -45,7 +45,16 @@ def info():
     commons.info(__arg_parser())
 
 
-if __name__ == '__main__':
+def commandline_entry():
     # Entry point for command line
     __args = __arg_parser().parse_args()  # parse command line arguments
-    print(__do(__args))  # call main routine - common form command line and python calls
+    if __args.version:
+        print ('astwro.tools '+astwro.tools.__version__)
+        exit()
+    result = __do(__args)  # call main routine - common form command line and python calls
+    print(result)
+    return 0
+
+if __name__ == '__main__':
+    code = commandline_entry()
+    exit(code)

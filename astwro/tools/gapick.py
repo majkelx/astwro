@@ -21,7 +21,7 @@ from deap import base
 from deap import creator
 from deap import tools
 
-import __commons as commons
+import astwro.tools.__commons as commons
 import astwro.starlist as sl
 import astwro.pydaophot as dao
 import astwro.tools
@@ -482,9 +482,8 @@ def main(**kwargs):
 def info():
     commons.info(__arg_parser())
 
-
-if __name__ == '__main__':
-    # Entry point for command line
+def commandline_entry():
+        # Entry point for command line
     __args = __arg_parser().parse_args()  # parse command line arguments
     if __args.version:
         print ('astwro.tools '+astwro.tools.__version__)
@@ -492,4 +491,8 @@ if __name__ == '__main__':
     __stars = __do(__args)  # call main routine - common form command line and python calls
     if not __args.no_stdout:
         print('\n'.join(map(str, __stars.index)))
+    return 0
 
+if __name__ == '__main__':
+    code = commandline_entry()
+    exit(code)
