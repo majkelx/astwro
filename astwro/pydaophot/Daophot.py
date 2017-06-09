@@ -57,7 +57,7 @@ class Daophot(DAORunner):
         :param bool batch:         whether Daophot have to work in batch mode. 
         """
         if daophotopt is not None:
-            self.daophotopt = daophotopt
+            self.daophotopt = daophotopt  #:str: daophotopt.opt file to be copied to *runner dir*
         else:
             self.daophotopt = find_opt_file('daophot.opt')
 
@@ -73,7 +73,7 @@ class Daophot(DAORunner):
     def _reset(self):
         super(Daophot, self)._reset()
 
-        self.OPtion_result = None
+        self.OPtion_result = None  #: Results of command OPtion  or initial options reported by `daophot`
         self.ATtach_result = None
         self.FInd_result = None
         self.PHotometry_result = None
@@ -137,15 +137,21 @@ class Daophot(DAORunner):
 
     def set_options(self, options, value=None):
         # type: ([str,dict,list], [str,float]) -> None
-        """set option(s) before run. options can be either:
-                dictionary:             `dp.OPtion({'GAIN': 9, 'FI': '6.0'})`
-                iterable of tuples:     `dp.OPtion([('GA', 9.0), ('FITTING RADIUS', '6.0')])`
+        """ Set option(s) before run. options can be either:
+        
+                dictionary:             
+                                        ``dp.OPtion({'GAIN': 9, 'FI': '6.0'})``                
+                iterable of tuples:     
+                                        ``dp.OPtion([('GA', 9.0), ('FITTING RADIUS', '6.0')])``
+                
                 option key, followed by value in 'value' parameter:
-                                        `dp.OPtion('GA', 9.0)`
+                                        ``dp.OPtion('GA', 9.0)``
+                                        
                 filename string of allstar.opt-formatted file (file will be symlinked as `allstar.opt`):
-                                        `dp.OPtion('opts/newallstar.opt')`
-            Do not set WATCH PROGRESS to sth else than -2
-                """
+                                        ``dp.OPtion('opts/newallstar.opt')``
+                                        
+            Do not set `WATCH PROGRESS` to something else than -2
+        """
         if isinstance(options, str) and value is None:  # filename
             # allstar operates in his tmp dir and has limited buffer for file path
             # so symlink file to its working dir
@@ -168,8 +174,8 @@ class Daophot(DAORunner):
         ATtach is enqueued automatically (preferred method
         until multiple ATTACH commands needed in "batch" mode).
         
-        :param str image_file: image to attach file will be symlinked to work dir as i.fits,
-                   if None 'i.fits' (file or symlink) is expected in working dir
+        :param str image_file: image to attach file will be symlinked to work dir as `i.fits`,
+                   if None `i.fits` (file or symlink) is expected in working dir
         :return: DPOP_ATtach instance for getting results: ATtach_result property
         """
         if not self.batch_mode:
