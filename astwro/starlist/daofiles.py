@@ -209,18 +209,17 @@ def write_dao_header(hdr, stream, line_prefix=''):
 
 
 def _write_table(starlist, file, dao_type):
-    #TODO: Przepisac to na szybkie!!!
+    # preapre columns (from daotype in order but only existing in starlist)
+    columns = [c for c in dao_type.columns if c in starlist.columns]
+    coltypes = [_get_col_type(dao_type.extension, c) for c in columns]
+    towrite = starlist[columns]
+
     for i, row in starlist.iterrows():
-        for col in dao_type.columns:
-            val = i if col == 'id' else row.get(col)
-            if val is None: # not all columns exist in StarList, do not  write rest of them
-                continue
-            coltype = _get_col_type(dao_type.extension, col)
+        for col, coltype, val in zip(columns, coltypes, row):
             if pd.isnull(val):
                 val = coltype.NaN[0]
             file.write(coltype.format.format(val))
         file.write('\n')
-
 
 def _parse_file(file, dao_type):
     if dao_type is None and isinstance(file, str):
