@@ -5,9 +5,8 @@ from __future__ import print_function, division
 
 from scipy.stats import sigmaclip
 
-from astwro.pydaophot import daophot
-from astwro.pydaophot import fname
-from astwro.pydaophot import allstar
+from astwro.pydaophot import Daophot
+from astwro.pydaophot import Allstar
 from astwro.starlist import read_dao_file
 from astwro.starlist import write_ds9_regions
 
@@ -21,15 +20,12 @@ from astwro.starlist import write_ds9_regions
 def main(**kwargs):
     # 1 do daophot aperture and psf photometry and run allstar
 
-    dp = daophot(image_file=kwargs.image)
-    dp.copy_to_runner_dir(kwargs.coo, fname.COO_FILE)
-    dp.PHotometry()
-    dp.copy_to_runner_dir(kwargs.lst, fname.LST_FILE)
-    dp.PSf()
-    dp.run(wait=True)
-    al = allstar(dp.dir)
-    al.run()
-    all_s = read_dao_file(al.file_from_runner_dir(fname.ALS_FILE))
+    dp = Daophot(image=kwargs.image)
+    dp.PHotometry(stars=kwargs.coo)
+    dp.PSf(psf_stars=kwargs.lst)
+    al = Allstar(dir=dp.dir)
+    al.ALlstar()
+    all_s = al.ALlstars_result
     print(sigmaclip(all_s.psf_chi)[0].mean())
     all_s.hist('psf_chi')
 

@@ -50,8 +50,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'astwro'
-copyright = u'2017, Mikolaj Kaluszynski'
-author = u'Mikolaj Kaluszynski'
+copyright = u'2017, Mikolaj Kaluszynski, Astronomical Institute of Wroclaw University'
+author = u'Mikolaj Kaluszynski, Astronomical Institute of Wroclaw University'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

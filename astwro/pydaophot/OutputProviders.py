@@ -1,7 +1,9 @@
 import re
 from logging import *
+import astwro.starlist
 from astwro.starlist import read_dao_file
 
+# TODO: check for failure on all providers
 
 class AbstractOutputProvider(object):
     """ Abstract class (interface) for chained stream processing """
@@ -117,14 +119,20 @@ r_phot = re.compile(r'Estimated magnitude limit \(Aperture 1\): +(-?\d+\.\d*) +\
 #    for PIck
 r_pick = re.compile(r'(\d+) +suitable candidates')
 #    for PSf
-r_psf = re.compile(r'Chi    Parameters...\n>* +(-?\d+\.\d*) +(-?\d+\.\d*) +(-?\d+\.\d*)')
-r_psf_errors = re.compile(r' (\d+) +(\d+.\d+) [ ?*]')
+r_psf = re.compile(r'Chi {4}Parameters...\n>* +(-?\d+\.\d*) +(-?\d+\.\d*) +(-?\d+\.\d*)')
+r_psf_errors = re.compile(r' (\d+) +(\d+.\d+) ([ ?*])')
 r_psf_failed_to_converge = re.compile(r'Failed to converge')
+#    for GRoup
+r_grp = re.compile(r'(\d+) +(\d+)')
+r_grp_summ = re.compile(r'(\d+) +stars in (\d+) +groups.')
 
 # Allstar regexp
 r_alls_separator = re.compile(r'Input image name:')
 r_alls_opt = r_opt
 r_alls = re.compile(r'(\d+) +(\d+) +(\d+) +(\d+).*\n')
+
+
+#  DAOPHOT
 
 class DaophotCommandOutputProcessor(OutputBufferedProcessor):
 
@@ -132,10 +140,10 @@ class DaophotCommandOutputProcessor(OutputBufferedProcessor):
         return r_command.search(line) is not None
 
 class DPOP_ATtach(DaophotCommandOutputProcessor):
-
+    """Results of `ATTACH` daophot command"""
     @property
     def picture_size(self):
-        """returns tuple with (x,y) size of pic returned by 'attach' """
+        """tuple with (x,y) size of pic returned by 'ATTACH' """
         buf = self.get_buffer()
         match = r_pic_size.search(buf)
         if match is None:
@@ -147,6 +155,7 @@ class DPOP_ATtach(DaophotCommandOutputProcessor):
 
 
 class DPOP_OPtion(DaophotCommandOutputProcessor):
+    """Results of `OPTION` daophot command, or initial daophot options"""
     __options = None
 
     @property
@@ -163,16 +172,18 @@ class DPOP_OPtion(DaophotCommandOutputProcessor):
         return self.__options
 
     def get_option(self, key):
+        """single option"""
         return float(self.options[key[:2].upper()])
 
     def raise_if_error(self, line):
         _ = self.options
 
 class DpOp_FInd(DaophotCommandOutputProcessor):
+    """Results of `FIND` daophot command"""
     def __init__(self, prev_in_chain=None, starlist_file=None):
         self.__data = None
         self.__starlist = None
-        self.starlist_file = starlist_file
+        self.starlist_file = starlist_file  #: Patch to output file with found stars
         super(DpOp_FInd, self).__init__(prev_in_chain=prev_in_chain)
 
     @property
@@ -188,12 +199,14 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
 
     @property
     def found_starlist(self):
+        """StarList with found stars"""
         if self.__starlist is None and self.starlist_file:
             self.__starlist = read_dao_file(self.starlist_file)
         return self.__starlist
 
     @property
     def sky(self):
+        """Sky estimation"""
         return float(self.data[0])
 
     @property
@@ -203,14 +216,17 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
 
     @property
     def mean(self):
+        """Mean of image"""
         return float(self.data[2])
 
     @property
     def median(self):
+        """Median of image"""
         return float(self.data[3])
 
     @property
     def pixels(self):
+        """Number of analyzed pixels"""
         t = self.data[4]
         if t is None or t == '':
             t = 0
@@ -220,18 +236,20 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
 
     @property
     def err(self):
+        """Error estimation"""
         return self.data[6]
 
     @property
     def stars(self):
+        """Number of found stars"""
         return self.data[7]
 
 class DpOp_PHotometry(DaophotCommandOutputProcessor):
-
+    """Results of `PHOTOMETRY` daophot command"""
     def __init__(self, prev_in_chain=None, photometry_file=None):
         self.__data = None
         self.__starlist = None
-        self.photometry_file = photometry_file
+        self.photometry_file = photometry_file  #: Patch to output file with aperture photometry
         super(DpOp_PHotometry, self).__init__(prev_in_chain=prev_in_chain)
 
     @property
@@ -255,21 +273,25 @@ class DpOp_PHotometry(DaophotCommandOutputProcessor):
 
     @property
     def photometry_starlist(self):
+        """StarList with photometry
+        :rtype: astwro.starlist.StarList 
+        """
         if self.__starlist is None and self.photometry_file:
             self.__starlist = read_dao_file(self.photometry_file)
         return self.__starlist
 
 
 class DpOp_PIck(DaophotCommandOutputProcessor):
-
+    """Results of `PICK` daophot command"""
     def __init__(self, prev_in_chain=None, picked_stars_file=None):
         self.__stars = None
         self.__starlist = None
-        self.picked_stars_file = picked_stars_file
+        self.picked_stars_file = picked_stars_file  #: Patch to output file with picked stars
         super(DpOp_PIck, self).__init__(prev_in_chain=prev_in_chain)
 
     @property
     def stars(self):
+        """Number of picked stars"""
         if self.__stars is None:
             buf = self.get_buffer()
             match = r_pick.search(buf)
@@ -281,6 +303,7 @@ class DpOp_PIck(DaophotCommandOutputProcessor):
 
     @property
     def picked_starlist(self):
+        """StarList with picked stars"""
         if self.__starlist is None and self.picked_stars_file:
             self.__starlist = read_dao_file(self.picked_stars_file)
         return self.__starlist
@@ -288,13 +311,22 @@ class DpOp_PIck(DaophotCommandOutputProcessor):
 
 
 class DpOp_PSf(DaophotCommandOutputProcessor):
+    """Results of `PSF` daophot command"""
     def __init__(self, prev_in_chain=None, psf_file=None, nei_file=None, err_file=None):
         self.__data = None
         self.__errors = None
-        self.psf_file = psf_file
-        self.nei_file = nei_file
-        self.err_file = err_file
+        self.__neilist = None
+        self.psf_file = psf_file  #: Patch to output file with PSF function
+        self.nei_file = nei_file  #: Patch to output neighbours file 
+        self.err_file = err_file  #: Patch to output errors file
         super(DpOp_PSf, self).__init__(prev_in_chain=prev_in_chain)
+
+    @property
+    def nei_starlist(self):
+        """StarList with neighbours stars"""
+        if self.__neilist is None and self.nei_file:
+            self.__neilist = read_dao_file(self.nei_file)
+        return self.__neilist
 
     @property
     def converged(self):
@@ -303,9 +335,16 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
 
     @property
     def errors(self):
+        """StarList (pandas.DataFrame) of PSF stars with errors and flags ('?', '*' or ' ')
+        
+        This information is identical to i.err file, but obtained directly from daophot output"""
         if self.__errors is None:
-            buf = self.get_buffer()  # TODO: implement 'saturated'
-            self.__errors = [(int(star), float(err)) for star, err in r_psf_errors.findall(buf)]
+            buf = self.get_buffer()
+            lst = [(int(star), float(err), flag) for star, err, flag in r_psf_errors.findall(buf)]
+            sl = astwro.starlist.StarList(lst)
+            sl.columns = ['id','psf_err','flag']
+            sl.index = sl.id
+            self.__errors = sl
         return self.__errors
 
     @property
@@ -318,10 +357,12 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
 
     @property
     def chi(self):
+        """Chi error estimation"""
         return float(self.data[0])
 
     @property
     def hwhm_xy(self):
+        """tuple (x,y) of halfwidth's of PSF function"""
         return float(self.data[1]), float(self.data[2])
 
     def __get_data(self):
@@ -333,16 +374,68 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
         return self.__data
 
 
-class DpOp_SUbstar(OutputBufferedProcessor):
+class DpOp_SUbstar(DaophotCommandOutputProcessor):
+    """Results of `SUBSTAR` daophot command"""
     def __init__(self, prev_in_chain=None, subtracted_image_file=None):
-        self.subtracted_image_file = subtracted_image_file
+        self.subtracted_image_file = subtracted_image_file  #: Patch to output fits image
         super(DpOp_SUbstar, self).__init__(prev_in_chain=prev_in_chain)
 
+class DpOp_GRoup(DaophotCommandOutputProcessor):
+    """Results of `GROUP` daophot command"""
+    def __init__(self, prev_in_chain=None, groups_file=None):
+        self.__data = None
+        self.__grouphist = None
+        self.groups_file = groups_file  #: Patch to output file with groups
+        super(DpOp_GRoup, self).__init__(prev_in_chain=prev_in_chain)
+
+    @property
+    def groups_histogram(self):
+        """List of tuples: (size_of_group, number_of_groups)"""
+        if self.__grouphist is None:
+            buf = self.get_buffer()
+            self.__grouphist = [(int(size), int(count)) for size, count in r_grp.findall(buf)]
+        return self.__grouphist
+
+    @property
+    def data(self):
+        if self.__data is None:
+            buf = self.get_buffer()
+            match = r_grp_summ.search(buf)
+            if match is not None:
+                self.__data = match.groups()
+        return self.__data
+
+    @property
+    def stars(self):
+        """Number of grouped stars reported by daophot `GROUP` command"""
+        return float(self.data[0])
+
+    @property
+    def groups(self):
+        """Number of groups"""
+        return float(self.data[1])
 
 
-class DpOp_SOrt(OutputBufferedProcessor):
+class DpOp_NEda(DaophotCommandOutputProcessor):
+    def __init__(self, prev_in_chain=None, neda_file=None):
+        self.neda_file = neda_file #: Patch to output file with NEDA photometry
+        self.__nedalist = None
+        super(DpOp_NEda, self).__init__(prev_in_chain=prev_in_chain)
+
+    @property
+    def neda_starlist(self):
+        """stars list with neda photometry"""
+        if self.__nedalist is None and self.neda_file:
+            self.__nedalist = read_dao_file(self.neda_file)
+        return self.__nedalist
+
+
+
+class DpOp_SOrt(DaophotCommandOutputProcessor):
     pass
 
+
+#  ALLSTARS
 
 class AsOp_opt(OutputBufferedProcessor):
     __options = None

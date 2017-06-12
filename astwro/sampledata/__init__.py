@@ -2,26 +2,26 @@
 def fits_image():
     return __sampledata('NGC6871.fits')
 
-
 def coo_file():
     return __sampledata('NGC6871.coo')
-
 
 def lst_file():
     return __sampledata('NGC6871.lst')
 
-
 def ap_file():
     return __sampledata('NGC6871.ap')
-
 
 def psf_file():
     return __sampledata('NGC6871.psf')
 
-
 def als_file():
     return __sampledata('NGC6871.als')
 
+def nei_file():
+    return __sampledata('NGC6871.nei')
+
+def err_file():
+    return __sampledata('i.err')
 
 def __sampledata(filename):
     import os

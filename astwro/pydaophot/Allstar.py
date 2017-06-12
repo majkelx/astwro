@@ -82,7 +82,7 @@ class Allstar(DAORunner):
             if isinstance(options, dict):
                 options = options.items()  # options is dict
             # else options is list of pairs
-            commands += ''.join('%s=%.2f\n' % (k, float(v)) for k, v in options)
+            commands += ''.join('%s=%.2f\n' % (k, float(v)) for k, v in options if v is not None)
         commands += '\n'
         processor = AsOp_opt()
         self.OPtion_result = processor
@@ -90,17 +90,20 @@ class Allstar(DAORunner):
 
     def _init_workdir_files(self, dir):
         super(Allstar, self)._init_workdir_files(dir)
-        self.link_to_runner_dir(self.allstaropt)
+        self.link_to_runner_dir(self.allstaropt, 'allstar.opt')
 
     def set_options(self, options, value=None):
         # type: ([str,dict,list], [str,float]) -> None
-        """set option(s) before run. options can be either:
+        """set option(s) before run. 
+        
+        Options can be either:
                 dictionary:             `dp.OPtion({'GAIN': 9, 'FI': '6.0'})`
                 iterable of tuples:     `dp.OPtion([('GA', 9.0), ('FITTING RADIUS', '6.0')])`
                 option key, followed by value in 'value' parameter:
                                         `dp.OPtion('GA', 9.0)`
                 filename string of allstar.opt-formatted file (file will be symlinked as `allstar.opt`):
                                         `dp.OPtion('opts/newallstar.opt')`
+        Once set, options will stay set in next runs, set option to `None` to unset
                 """
         if isinstance(options, str) and value is None:  # filename
             # allstar operates in his tmp dir and has limited buffer for file path

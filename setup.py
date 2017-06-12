@@ -36,7 +36,7 @@ setup(
     url='https://github.com/majkelx/astwro',
 
     # Author details
-    author='Mikolaj Kaluszynski',
+    author='Mikolaj Kaluszynski, Astronomical Institute of Wroclaw University',
     # author_email='pypa-dev@googlegroups.com',
 
     # Choose your license

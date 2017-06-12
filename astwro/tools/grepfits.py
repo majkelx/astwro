@@ -7,6 +7,7 @@ import astropy.io.fits as pyfits
 import re
 from os.path import isfile
 from sys import exit
+from sys import stdout
 
 import __commons as commons
 
@@ -20,17 +21,19 @@ def headers(filenames):
             huds.close()
             yield h
 
-
-def __do(arg):
-    regexp = re.compile(arg.pattern, flags=re.IGNORECASE)
+def grep(pattern, filenames, output=stdout):
+    regexp = re.compile(pattern, flags=re.IGNORECASE)
     matched = 0
-    for h in headers(arg.file):
+    for h in headers(filenames):
         rep = repr(h).strip()
         for line in rep.splitlines():
             if regexp.search(line):
                 matched += 1
-                print(line)
+                print(line, file=output)
     return matched
+
+def __do(arg):
+    return  grep(arg.pattern, arg.file)
 
 
 def __arg_parser():

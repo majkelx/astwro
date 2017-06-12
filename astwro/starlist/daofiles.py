@@ -6,54 +6,79 @@ from itertools import chain
 
 
 class DAO(object):
-    FType = namedtuple('DAOFileType', ['columns', 'extension', 'NL'])
+    FType = namedtuple('DAOFileType', ['columns', 'extension', 'NL', 'read_cols'])
     CType = namedtuple('DAOColumnType', ['name', 'format', 'NaN'])
     UNKNOWN_FILE = FType(
         columns   = ['id'] + range(1, 100),  # id then unknown columns
         extension = '.stars',
-        NL = None,
+        NL = 1,
+        read_cols=None,
     )
     COO_FILE = FType(
         columns   = ['id', 'x', 'y', 'mag_rel_to_threshold', 'sharp', 'round', 'round_marg'],
         extension = '.coo',
         NL = 1,
+        read_cols=None,
     )
     AP_FILE_ODD = FType(   # odd rows columns (used in read)
         columns   = ['id', 'x', 'y'] + ['A{:X}'.format(n) for n in range(1,13)],  # id,x,y,A1,A2,..,AC
         extension = '',
         NL = 2,
+        read_cols=None,
     )
     AP_FILE_EVEN = FType(  # even rows columns (used in read)
         columns   = ['sky', 'sky_err', 'sky_skew'] + ['A{:X}_err'.format(n) for n in range(1,13)],
         extension='',
         NL=2,
+        read_cols=None,
     )
     AP_FILE = FType(  # (used in write)
         # id,x,y,A1,A2,..,AC,asky,asky_err,asky_skew,A1_err,...,AC_err
         columns   = AP_FILE_ODD.columns + AP_FILE_EVEN.columns,
         extension = '.ap',
         NL = 2,
+        read_cols=None,
     )
     LST_FILE = FType(
         columns   = ['id', 'x', 'y', 'mag1', 'err1', 5],
         extension = '.lst',
         NL = 3,
+        read_cols=None,
     )
     NEI_FILE = FType(
         columns   = ['id', 'x', 'y', 'mag1', 4],
         extension = '.nei',
         NL = 3,
+        read_cols=None,
     )
     ALS_FILE = FType(
         columns   = ['id', 'x', 'y', 'mag_rel_psf', 'mag_rel_psf_err', 'sky', 'psf_iter', 'psf_chi', 'psf_sharp'],
         extension = '.als',
         NL = 1,
+        read_cols=None,
+    )
+    ERR_FILE = FType(
+        columns   = ['id', 'err'],
+        extension = '.err',
+        NL=None,
+        read_cols = 2,
     )
     SHORT_FILE = FType(   # Filetype for all_stars files in Bialkow workflow
         columns=['id', 'x', 'y', 'mag_rel_psf', 'mag_rel_psf_err'],
         extension='.all_stars',
         NL=1,
+        read_cols=None,
     )
+    file_types = {
+        COO_FILE.extension: COO_FILE,
+        AP_FILE.extension: AP_FILE,
+        LST_FILE.extension: LST_FILE,
+        NEI_FILE.extension: NEI_FILE,
+        ALS_FILE.extension: ALS_FILE,
+        ERR_FILE.extension: ERR_FILE,
+        SHORT_FILE.extension: SHORT_FILE
+    }
+
 
     # columns dictionary, the key is either:
     # - tuple (filetype:FType, column:str)
@@ -96,7 +121,8 @@ def read_dao_file(file, dao_type = None):
                 if file is provided as filename
     :return: StarList instance
     """
-    return _parse_file(file, dao_type)
+    ret = _parse_file(file, dao_type)
+    return ret
 
 
 def write_dao_file(starlist, file, dao_type=None):
@@ -137,6 +163,7 @@ def _get_col_type(file_ext, column):
 def _write_file(starlist, file, dao_type):
     f, to_close = get_stream(file, 'w')
     if starlist.DAO_hdr is not None:
+        starlist.DAO_hdr['NL'] = dao_type.NL
         write_dao_header(starlist.DAO_hdr, f)
         f.write('\n')
     _write_table(starlist, f, dao_type)
@@ -182,10 +209,11 @@ def write_dao_header(hdr, stream, line_prefix=''):
 
 
 def _write_table(starlist, file, dao_type):
+    #TODO: Przepisac to na szybkie!!!
     for i, row in starlist.iterrows():
         for col in dao_type.columns:
             val = i if col == 'id' else row.get(col)
-            if val is None: # not all columns exist in StarList, do not write rest of them
+            if val is None: # not all columns exist in StarList, do not  write rest of them
                 continue
             coltype = _get_col_type(dao_type.extension, col)
             if pd.isnull(val):
@@ -195,10 +223,16 @@ def _write_table(starlist, file, dao_type):
 
 
 def _parse_file(file, dao_type):
+    if dao_type is None and isinstance(file, str):
+        _, ext = os.path.splitext(file)
+        dao_type = DAO.file_types.get(ext)
+
     f, to_close = get_stream(file, 'r')
-    hdr, _ = read_dao_header(f)
-    fl = _parse_table(f, hdr, dao_type)
-    close_files(to_close)
+    try:
+        hdr, _ = read_dao_header(f)
+        fl = _parse_table(f, hdr, dao_type)
+    finally:
+        close_files(to_close)
     fl.DAO_hdr = hdr
     return  fl
 
@@ -243,7 +277,11 @@ def parse_dao_hdr(hdr, val, line_prefix=''):
 
 
 def _parse_table(f, hdr, dao_type):
-    df = pd.read_table(f, header=None, sep='\s+')  #, index_col=0)
+    if dao_type is not None and dao_type.read_cols is not None:  # limit number of read cols
+        df = pd.read_table(f, header=None, sep='\s+', usecols=range(dao_type.read_cols))
+    else:
+        df = pd.read_table(f, header=None, sep='\s+')
+
     #df.insert(0, 'id', df.index.to_series())
     if dao_type is None:
         dao_type = _guess_filetype(hdr, df)
@@ -257,6 +295,7 @@ def _parse_table(f, hdr, dao_type):
     else:
         df.columns = dao_type.columns[:df.columns.size]
 
+
     df.id = df.id.astype(int)
     df.index = df.id
 
@@ -265,7 +304,10 @@ def _parse_table(f, hdr, dao_type):
         coltype = _get_col_type(dao_type.extension, col)
         if coltype.NaN:
             df[col].replace(coltype.NaN, pd.np.nan, inplace=True)
-    return StarList(df)
+
+    ret = StarList(df)
+    ret.DAO_type = dao_type
+    return ret
 
 
 def _guess_filetype(header, table):

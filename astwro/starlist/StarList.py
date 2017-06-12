@@ -6,7 +6,7 @@ import pandas as pd
 class StarList(pd.DataFrame):
     #
     # StarList properties extending  pd.DataFrame
-    _metadata = ['_DAO_hdr']
+    _metadata = ['_DAO_hdr', '_DAO_type']
 
     @staticmethod
     def new():
@@ -24,12 +24,21 @@ class StarList(pd.DataFrame):
 
     @property
     def DAO_hdr(self):
-        """returns DAO file header dict if any"""
+        """DAO file header dict if any"""
         return self._DAO_hdr
 
     @DAO_hdr.setter
     def DAO_hdr(self, hdr):
         self._DAO_hdr = hdr
+
+    @property
+    def DAO_type(self):
+        """DAO file header dict if any"""
+        return self._DAO_type
+
+    @DAO_type.setter
+    def DAO_type(self, typ):
+        self._DAO_type = typ
 
     def count(self):
         """returns number of stars in list"""

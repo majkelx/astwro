@@ -19,6 +19,8 @@ Welcome to astwro's documentation!
 .. autoclass:: astwro.pydaophot.Daophot
    :members:
    :inherited-members:
+.. automodule:: astwro.pydaophot.OutputProviders
+   :members:
 
 Indices and tables
 ==================

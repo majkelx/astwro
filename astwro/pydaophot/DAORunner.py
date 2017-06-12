@@ -70,6 +70,8 @@ class DAORunner(Runner):
         :param  filename: name of file in runner directory, default: random name with extension '.stars'
         :return name of file in runner directory
         """
+        if dao_file_type is None:
+            dao_file_type = stars.DAO_type
         if filename is None:
             ext = dao_file_type.extension if dao_file_type else '.stars'
             filename = self._runner_dir_file_name(signature=random.random(), suffix=ext)
