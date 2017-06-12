@@ -21,17 +21,17 @@ class TestRunners(unittest.TestCase):
         self.assertGreater(x, 0)
         self.assertGreater(y, 0)
 
-    @unittest.skip('long run, un-skip to test allstar')
+    #@unittest.skip('long run, un-skip to test allstar')
     def test_execution_allstar_pipeline(self):
         d = Daophot(batch=True)
         d.ATtach(self.image)
         d.FInd(1, 1)
-        d.PHotometry()
+        d.PHotometry(IS=35, OS=50, apertures=[8])
         d.PIck()
         d.PSf()
         d.run()
         a = Allstar(dir=d.dir)
-        a.ALlstar()
+        a.ALlstar(stars='i.nei')
         self.assertGreater(a.ALlstars_result.stars_no, 0)
 
     def test_execution_psf_pipeline(self):

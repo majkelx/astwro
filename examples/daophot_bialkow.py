@@ -99,7 +99,7 @@ def daophot_photometry(
     )
 
     if not OBSERV:
-        OBSERV = 'BIALKOW'     # temporary, OBSERV should be set
+        OBSERV = 'BIALKOW'     # temporary for testing, OBSERV should be set !
 
     if OBSERV != 'BIALKOW':
         raise Exception('The header keyword OBSERVAT has value: {}\n'
@@ -243,10 +243,32 @@ def daophot_photometry(
 
 
 if __name__ == '__main__':
-    from astwro.sampledata import fits_image, coo_file, lst_file
-    impath, image = path.split(fits_image())
-    alls = coo_file()
-    psfs = lst_file()
+    import argparse
+    parser = argparse.ArgumentParser(description=
+                                     " daophot_bialkow for Linux \n"
+                                     " by Z. Kolaczkowski, version 2016.10.11 \n"
+                                     " rewritten to python/astwro by M. Kaluszynski\n"
+                                     " the script makes profile and aperture photometry\n"
+                                     " it works properly only for Bialkow/ANDOR CCD frames\n"
+                                     " requirements: DAOPHOT/ALLSTAR\n"
+                                     " run without arguments works in 'demo' mode on astwro sample data\n",
+                                     formatter_class = argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('image', default=None, nargs='?')
+    parser.add_argument('all_stars', default=None, nargs='?')
+    parser.add_argument('psf_stars', default=None, nargs='?')
+    arg = parser.parse_args()
+    if any([arg.image, arg.all_stars, arg.psf_stars]):
+        if not all([arg.image, arg.all_stars, arg.psf_stars]):
+            log.error('All: image, all_stars, psf_stars, should be given. Or nothing for "demo" mode.')
+            parser.print_usage()
+            exit(1)
+        impath ='.'
+    else:
+        # for testing only
+        from astwro.sampledata import fits_image, coo_file, lst_file
+        impath, image = path.split(fits_image())
+        alls = coo_file()
+        psfs = lst_file()
 
     try:
         r = daophot_photometry(image, all_stars=alls, psf_stars=psfs, IMGPATH=impath)
