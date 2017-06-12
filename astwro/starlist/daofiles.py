@@ -4,6 +4,7 @@ import pandas as pd
 from collections import namedtuple
 from itertools import chain
 
+# TODO: conversions of types, apply automatically on write
 
 class DAO(object):
     FType = namedtuple('DAOFileType', ['columns', 'extension', 'NL', 'read_cols'])
@@ -128,7 +129,6 @@ def read_dao_file(file, dao_type = None):
 def write_dao_file(starlist, file, dao_type=None):
     """
     Write StarList object into daophot  file.
-    :rtype: None
     :param starlist: StarList instance to be writen
     :param file: writable stream or filename, if stream dao_type must be specified
     :param dao_type: file format, one of DAO.XXX_FILE constants:
@@ -139,12 +139,10 @@ def write_dao_file(starlist, file, dao_type=None):
                     - DAO.ALS_FILE
                 If missing extension of file will be used to determine file type
                 if file is provided as filename
+    :rtype: None
     """
-    if dao_type is None and isinstance(file, str): # guess file type from extension
-        _, ext = os.path.splitext(file)
-        types = [v for k, v in DAO.__dict__.items() if isinstance(v, DAO.FType) and v.extension == ext]
-        if types:
-            dao_type = types[0]
+    if dao_type is None:
+        dao_type = starlist.DAO_type
     if dao_type is None:
         dao_type = DAO.UNKNOWN_FILE
 

@@ -9,9 +9,17 @@ import astropy.io.fits as fits
 import astwro.pydaophot
 import astwro.starlist
 
+PROGRESS = 25
+# Choose number of info dumped to stderr:
+# loglevel = logging.DEBUG
+# loglevel = logging.INFO
+loglevel = PROGRESS
+# loglevel = logging.WARNING
+
 
 # Two loggers: log - stderr and runlog - file logger
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+logging.addLevelName(PROGRESS, 'PRGRS')
+logging.basicConfig(level=loglevel, format='[%(levelname)s] %(message)s')
 log = logging.getLogger()
 runlog = logging.getLogger('file_runlog')
 runlog.propagate = False  # do not pass logrecord to stderr logger ater logging to file
@@ -21,7 +29,7 @@ def lstcorr(mult, err, psf, phase):
     averr = err.psf_err.mean()
     err = err[(err.psf_err < mult*averr) & (err.flag == ' ')]  # filter out big errors and * or ? marked stars
     if err.count() != psf.count():
-        log.info('{} PSF stars discarded during {}, error threshold: {}'.format(
+        log.warning('{} PSF stars discarded during {}, error threshold: {}'.format(
             psf.count() - err.count(), phase, mult * averr))
     return psf.loc[err.index]
 
@@ -31,6 +39,7 @@ def daophot_photometry(
         all_stars,
         psf_stars,
         IMGPATH = '.',
+        OUTPATH = '.',
         logfile = 'run.log',
         INPUT = None,
         NPSFV=15,  # minimal nuber of stars for variable PSF
@@ -45,6 +54,7 @@ def daophot_photometry(
         frmt = logging.Formatter('%(message)s')
         hdlr.setFormatter(frmt)
         runlog.addHandler(hdlr)
+        runlog.setLevel(logging.INFO)
     else:
         runlog.addHandler(logging.NullHandler)
 
@@ -80,7 +90,7 @@ def daophot_photometry(
     if not INPUT:
         INPUT = path.join(path.dirname(__file__), 'daophot_bialkow_input')
 
-    log.info(
+    log.log(PROGRESS,
         '*************************************\n'
         ' pyDAOPHOT/ALLSTAR workflow for %s\n'
         ' file: %s\n'
@@ -96,6 +106,7 @@ def daophot_photometry(
                         'Wrong observatory name, only BIALKOW permitted\n'.format(image, OBSERV))
 
     # registering file in run.log
+
     log.info(image)
     runlog.info(image)
     im_name, _ = path.splitext(image)
@@ -106,10 +117,12 @@ def daophot_photometry(
 
     # Create daophot and allstar wrappers which uses shared temporary directory
     # and running in batch mode - execution of commands on run() method
+
     sdaophot = astwro.pydaophot.Daophot(image=image_filepath, daophotopt=daophot_opt)
     sallstar = astwro.pydaophot.Allstar(dir=sdaophot.dir, image=image_filepath, allstaropt=allstar_opt)
 
     # aperture photometry (tr-allps.par)
+
     sdaophot.PHotometry(photoopt=photo_opt, stars=all_stars)
     # sdaophot.PIck(80,20)
     #idxslst -b=${YSIZE},${XSIZE} -r=${PSFRAD} -e=0.1 i.ap ${im_name}.lst i.lst
@@ -126,7 +139,8 @@ def daophot_photometry(
     else:
         sdaophot.link_to_runner_dir(path.join(INPUT, DAOOPT_CONST), 'daophot.opt')
 
-    # preliminary estimation of PSF and selection of PSF stars:
+    # preliminary estimation of PSF and selection of PSF stars
+
     sdaophot.PSf(psf_stars=psf_ap)  # psf - i1.par
     # lstcorr -s ${ERRPSF1} i.err i.lst
     psf_ap = lstcorr(ERRPSF1, sdaophot.PSf_result.errors, psf_ap, 'preliminary estimation of PSF')
@@ -141,29 +155,35 @@ def daophot_photometry(
         sdaophot.link_to_runner_dir(path.join(INPUT, DAOOPT_CONST), 'daophot.opt')
 
     # first calculation of PSF
-    sdaophot.PSf(psf_stars=psf_ap)  # (psf-i1.par)
-    # lstcorr -s ${ERRPSF1} i.err i.lst
-    psf_ap = lstcorr(ERRPSF1, sdaophot.PSf_result.errors, psf_ap, 'first calculation of PSF')
-    # # PSF stars list will not change, so write it down instead of providing as parameter
-    # sdaophot.write_starlist(psf_ap, 'i.lst')
 
+    sdaophot.PSf(psf_stars=psf_ap)  # (psf-i1.par)
     # if (-s i.psf) then
+    if not sdaophot.PSf_result.success:
+        runlog.error('DAOPHOT cannot create PSF !')
+        raise Exception('DAOPHOT cannot create PSF !')
+        # lstcorr -s ${ERRPSF1} i.err i.lst
+    psf_ap = lstcorr(ERRPSF1, sdaophot.PSf_result.errors, psf_ap, 'first calculation of PSF')
     sallstar.set_options('ma', 100) # psf-subn.par
     sallstar.ALlstar(stars='i.nei')
 
     # second iteration of PSF
+
     sdaophot.batch_mode = True  # batch mode allows queuing multiple commands executed together on run() method
     sdaophot.SUbstar(subtract='i.als', leave_in=psf_ap)  # psf-i2.par
     sdaophot.run() # PSf command will delete i.psf do run SUbstar before it happens
     sdaophot.ATtach('is')
     sdaophot.PSf(photometry='i.als', psf_stars=psf_ap)
     sdaophot.run()
+    # if (-s i.psf) then
+    if not sdaophot.PSf_result.success:
+        runlog.error('DAOPHOT cannot create PSF !')
+        raise Exception('DAOPHOT cannot create PSF !')
     # lstcorr -s ${ERRPSF2} i.err i.lst
     psf_ap = lstcorr(ERRPSF2, sdaophot.PSf_result.errors, psf_ap, 'second iteration of PSF')
-    # if (-s i.psf) then
     sallstar.ALlstar(stars='i.nei')  # psf-subn.par
 
     # third iteration of PSF, grouping
+
     sdaophot.SUbstar(subtract='i.als', leave_in=psf_ap)  # psf-i2.par
     sdaophot.run() # PSf command will delete i.psf do run SUbstar before it happens
     sdaophot.ATtach('is.fits')
@@ -171,13 +191,18 @@ def daophot_photometry(
     sdaophot.ATtach(image_filepath)
     sdaophot.GRoup(critical_overlap=0.1)
     sdaophot.run()
-    hx, hy = sdaophot.PSf_result.hwhm_xy
-
-
+    # if (-s i.psf) then
+    if not sdaophot.PSf_result.success:
+        runlog.error('DAOPHOT cannot create PSF !')
+        raise Exception('DAOPHOT cannot create PSF !')
     # rmsf 160 i.grp
     # if !(-e i.grp) cp i.ap i.grp
+    if sdaophot.GRoup_result.stars < 160:   ## what limit is equiv of rmsf 160 i.grp ?
+        sdaophot.copy_to_runner_dir(sdaophot.file_from_runner_dir('i.ap'), 'i.grp')
+    hx, hy = sdaophot.PSf_result.hwhm_xy
 
     # final fit
+
     sallstar.ALlstar(stars='i.grp')  #phot.par
     # idxecorr ${LIMMAGE} i.als i.tmp
     als = sallstar.ALlstars_result.als_stars
@@ -185,21 +210,29 @@ def daophot_photometry(
     sdaophot.GRoup(photometry=als, critical_overlap=0.1)  # photgrp.par
     sdaophot.run()
     sallstar.ALlstar(stars='i.grp')  #phot.par
-    #photsrt.par
+    # photsrt.par
+    pphot = sallstar.ALlstars_result.als_stars.sort_values('mag_rel_psf')
     #rmsf 200 i.idx
     #if !(-e i.idx) then
+    if pphot.count() < 200:  ## what limit is equiv of rmsf 200 i.idx ?
+        runlog.error('PSF photometry file not created !')
+        raise Exception('PSF photometry file not created!')
 
     # copying results of PSF photometry
-    pphot = sallstar.ALlstars_result.als_stars.sort_values('mag_rel_psf')
-    astwro.starlist.write_dao_file(pphot, im_name+'.pphot')
-    sdaophot.copy_from_runner_dir('i.psf', im_name+'.psf')
-    sdaophot.copy_from_runner_dir('is.fits', im_name+'sub.fits')
+
+    astwro.starlist.write_dao_file(pphot, path.join(OUTPATH, im_name+'.pphot'))
+    sdaophot.copy_from_runner_dir('i.psf', path.join(OUTPATH, im_name+'.psf'))
+    sdaophot.copy_from_runner_dir('is.fits', path.join(OUTPATH, im_name+'sub.fits'))
 
     #  APERTURE PHOTOMETRY WITH NEDA (2.5 * SEEING)
+
     A1 = 2.5 * (hx+hy)
     sdaophot.NEda(IS=35, OS=55, apertures=[A1], psf_photometry=pphot, stars_id=pphot)   # neda1.par
     sdaophot.run()
     # if !(-e i.nap) then
+    if not sdaophot.NEda_result.success:
+        runlog.error('Aperture photometry file not created, NEDA!')
+        raise Exception('Aperture photometry file not created, NEDA!')
     aphot = sdaophot.NEda_result.neda_starlist
     # idxecorr ${LIMMAGE} i.ap1 i.tmp
     aphot = aphot[aphot.A1_err < LIMMAGE]

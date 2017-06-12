@@ -3,7 +3,7 @@ from logging import *
 import astwro.starlist
 from astwro.starlist import read_dao_file
 
-# TODO: check for failure on all providers
+# TODO: check for failure on all providers (raise_if_error)
 
 class AbstractOutputProvider(object):
     """ Abstract class (interface) for chained stream processing """
@@ -32,11 +32,9 @@ class OutputProvider(AbstractOutputProvider):
     """ Base class for elements of stream processors chain
         also can be used as dummy processor in chain"""
 
-    # previous output provider
-
     def __init__(self, prev_in_chain=None):
         self.__stream = None
-        self._prev_in_chain = prev_in_chain
+        self._prev_in_chain = prev_in_chain # previous output provider
         self.logger = getLogger('ResultParser')
 
     def _consume(self, stream):
@@ -50,6 +48,27 @@ class OutputProvider(AbstractOutputProvider):
             self.__stream = self._prev_in_chain._get_output_stream()
             self._consume(self.__stream)
         return self.__stream
+
+    @property
+    def success(self):
+        """True if command succeed and output is ready """
+        try:
+            self.raise_if_error()
+        except:
+            return False
+        else:
+            return True
+
+    def raise_if_error(self):
+        """ Should raise exception if not properly processed:
+            - command did not run
+            - buffer analysis indicates error
+            - no output value found...
+            User can call it to check if command was successful
+            To be overridden """
+        pass
+
+
 
 
 class OutputLinesProcessor(OutputProvider):
@@ -84,14 +103,6 @@ class OutputBufferedProcessor(OutputLinesProcessor):
 
     def _is_last_one(self, line, counter):
         """ return True if it's last line.
-            To be overridden """
-
-    def raise_if_error(self, line):
-        """ Should raise exception if not properly processed:
-            - command did not run
-            - buffer analysis indicates error
-            - no output value found...
-            User can call it to check if command was successful
             To be overridden """
 
     def get_buffer(self):
@@ -150,7 +161,7 @@ class DPOP_ATtach(DaophotCommandOutputProcessor):
             raise Exception('daophot failed to attach image file. Output buffer:\n ' + buf)
         return int(match.group(1)), int(match.group(2))
 
-    def raise_if_error(self, line):
+    def raise_if_error(self):
         _ = self.picture_size
 
 
@@ -175,7 +186,7 @@ class DPOP_OPtion(DaophotCommandOutputProcessor):
         """single option"""
         return float(self.options[key[:2].upper()])
 
-    def raise_if_error(self, line):
+    def raise_if_error(self):
         _ = self.options
 
 class DpOp_FInd(DaophotCommandOutputProcessor):
@@ -274,6 +285,7 @@ class DpOp_PHotometry(DaophotCommandOutputProcessor):
     @property
     def photometry_starlist(self):
         """StarList with photometry
+
         :rtype: astwro.starlist.StarList 
         """
         if self.__starlist is None and self.photometry_file:
@@ -373,6 +385,10 @@ class DpOp_PSf(DaophotCommandOutputProcessor):
                 self.__data = match.groups()
         return self.__data
 
+    def raise_if_error(self):
+        if not self.converged:
+            raise Exception('PSF not converged')
+
 
 class DpOp_SUbstar(DaophotCommandOutputProcessor):
     """Results of `SUBSTAR` daophot command"""
@@ -459,7 +475,7 @@ class AsOp_opt(OutputBufferedProcessor):
     def get_option(self, key):
         return float(self.options[key[:2].upper()])
 
-    def raise_if_error(self, line):
+    def raise_if_error(self):
         _ = self.options
 
 class AsOp_result(OutputBufferedProcessor):
@@ -475,7 +491,8 @@ class AsOp_result(OutputBufferedProcessor):
 
     @property
     def als_stars(self):
-        """returns StarList of stars with profile photometry results"""
+        # type: () -> {astwro.starlist.StarList}
+        """StarList of stars with profile photometry results        """
         if self.__als_stars is None and self.profile_photometry_file:
             self.__als_stars = read_dao_file(self.profile_photometry_file)
         return self.__als_stars
@@ -494,3 +511,6 @@ class AsOp_result(OutputBufferedProcessor):
                 self.__stars = int(res[0]), int(res[1])
         return self.__stars
 
+    def raise_if_error(self):
+        if not self.stars_no > 0:
+            raise Exception('allstar: No stars')
