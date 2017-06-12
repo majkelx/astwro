@@ -49,7 +49,7 @@ class DAO(object):
         columns   = ['id', 'x', 'y', 'mag1', 4],
         extension = '.nei',
         NL = 3,
-        read_cols=None,
+        read_cols=5,
     )
     ALS_FILE = FType(
         columns   = ['id', 'x', 'y', 'mag_rel_psf', 'mag_rel_psf_err', 'sky', 'psf_iter', 'psf_chi', 'psf_sharp'],

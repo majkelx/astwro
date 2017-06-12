@@ -1,6 +1,7 @@
 import unittest
-from astwro.pydaophot import daophot, allstar
+from astwro.pydaophot import Daophot, Allstar
 
+# TODO: rewrite tests for v 0.4+ and switch to pytest
 
 class TestRunners(unittest.TestCase):
 
@@ -14,42 +15,34 @@ class TestRunners(unittest.TestCase):
         self.assertTrue(os.path.isfile(self.image))
 
     def test_execution_daophot(self):
-        d = daophot(image_file=self.image)
+        d = Daophot(image=self.image)
+        d.run()
         x,y = d.ATtach_result.picture_size
         self.assertGreater(x, 0)
         self.assertGreater(y, 0)
 
     @unittest.skip('long run, un-skip to test allstar')
     def test_execution_allstar_pipeline(self):
-        d = daophot()
+        d = Daophot(batch=True)
         d.ATtach(self.image)
         d.FInd(1, 1)
         d.PHotometry()
         d.PIck()
         d.PSf()
-        d.wait_for_results()
-        a = allstar(d.dir)
-        self.assertGreater(a.result.stars_no, 0)
+        d.run()
+        a = Allstar(dir=d.dir)
+        a.ALlstar()
+        self.assertGreater(a.ALlstars_result.stars_no, 0)
 
     def test_execution_psf_pipeline(self):
-        d = daophot()
-        d.ATtach(self.image)
+        d = Daophot(image=self.image, batch=True)
         d.FInd(1, 1)
-        d.PHotometry()
+        d.PHotometry(IS=35, OS=50, apertures=[8])
         d.PIck()
         d.PSf()
+        d.run()
         self.assertGreater(d.PSf_result.chi, 0)
 
-    def test_auto_attach_find_expl_run(self):
-        d = daophot(self.image)
-        d.FInd(1, 1)
-        self.assertGreater(d.FInd_result.stars, 0)
-
-    def test_implicit_reset(self):
-        d = daophot(image_file=self.image)
-        self.assertGreater(d.ATtach_result.picture_size[0], 0) # implicit run 1
-        d.FInd(1,1)  # implicit reset
-        self.assertGreater(d.FInd_result.stars, 0)  # implicit run 2
 
 
 suite = unittest.TestLoader().loadTestsFromTestCase(TestRunners)
