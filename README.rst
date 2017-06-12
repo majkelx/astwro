@@ -12,7 +12,7 @@ Astrophysical routines.
    :target: https://pypi.python.org/pypi/astwro/
 .. |licence badge| image:: https://img.shields.io/pypi/l/astwro.svg
     :target: https://pypi.python.org/pypi/astwro/
-.. |pythons badge| image:: https://img.shields.io/pypi/l/pyversions.svg
+.. |pythons badge| image:: https://img.shields.io/pypi/pyversions/astwro.svg
     :target: https://pypi.python.org/pypi/astwro/
 
 Overview
