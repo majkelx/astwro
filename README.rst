@@ -3,6 +3,7 @@ astwro
 ======
 Astrophysical routines.
 
+:Documentation: http://astwro.readthedocs.io/
 :Source: https://github.com/majkelx/astwro
 :Download: https://pypi.python.org/pypi/astwro
 
