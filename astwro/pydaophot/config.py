@@ -17,7 +17,7 @@ class __SinglethonConfig:
 def get_package_config_path():
     """Returns absolute path to directory containing default config files.
 
-    :rtype str
+    :rtype:str
     """
     return os.path.join(os.path.abspath(os.path.dirname(__file__)), 'config')
 
@@ -25,7 +25,7 @@ def get_package_config_path():
 def dao_config():
     """ Returns pydaophot module configuration singleton
 
-    :rtype ConfigParser
+    :rtype:ConfigParser
     """
     with multiprocessing.Lock():
         if __SinglethonConfig.config is None:
@@ -36,7 +36,7 @@ def dao_config():
 def parse_dao_config(files=None, parse_default_locations=True):
     """Parses pydaophot config from files and sets config singleton
 
-    :rtype ConfigParser
+    :rtype:ConfigParser
     """
     __SinglethonConfig.config = parse_config_files(files=files,
                                                    parse_default_locations=parse_default_locations,

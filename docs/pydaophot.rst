@@ -1,8 +1,8 @@
 .. _pydaophot:
 
-==================
-`astwro.pydaophot`
-==================
+================
+astwro.pydaophot
+================
 
 Module `astwro.pydaophot` provides interface for Peter B. Stetson's command line tools `daophot` and `allstar`
 

@@ -236,7 +236,7 @@ def daophot_photometry(
     aphot = sdaophot.NEda_result.neda_starlist
     # idxecorr ${LIMMAGE} i.ap1 i.tmp
     aphot = aphot[aphot.mag_err < LIMMAGE]
-    astwro.starlist.write_dao_file(aphot, im_name+'.aphot', astwro.starlist.DAO.ALS_FILE)
+    astwro.starlist.write_dao_file(aphot, path.join(OUTPATH, im_name+'.aphot'), astwro.starlist.DAO.ALS_FILE)
 
     return sdaophot, sallstar, pphot, aphot, psf_idx, psf_ap
 

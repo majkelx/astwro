@@ -39,6 +39,6 @@ def progressbar(total=100, prefix='', suffix='', decimals=1, bar_length=20, step
     :param int decimals: positive number of decimals in percent complete (Int)
     :param int bar_length: character length of bar (Int)
     :param int step: allows automatic progress increasing on parameter-less print_progress call
-    :rtype ProgressBar
+    :rtype:ProgressBar
     """
     return ProgressBar(total=total, prefix=prefix, suffix=suffix, decimals=decimals, bar_length=bar_length, step=step)

@@ -1,0 +1,28 @@
+* build doc locally:
+
+    $ cd docs/
+    $ make html
+
+* update docs in http://astwro.readthedocs.io/
+
+    Shuld build autmatically after github push
+
+* increase version:
+
+    Edit: /astwro/version.py AND /doc/config.py
+
+* run tests
+
+    consider comment/uncomment skipping `examples/tests/daophot_bialkow_test.py`
+    $ pytest
+
+
+* build new release
+
+    * increase version if needed
+    * run tests
+    * commit to git
+    * create git tag
+       $ git tag -a v1.4.4 -m "release 1.4.4"
+    * /push to github
+    *

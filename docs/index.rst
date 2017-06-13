@@ -1,3 +1,15 @@
+:Documentation: http://astwro.readthedocs.io/
+:Source: https://github.com/majkelx/astwro
+:Download: https://pypi.python.org/pypi/astwro
+
+|version badge| |licence badge| |pythons badge|
+
+.. |version badge| image:: https://img.shields.io/pypi/v/astwro.svg?maxAge=3600
+   :target: https://pypi.python.org/pypi/astwro/
+.. |licence badge| image:: https://img.shields.io/pypi/l/astwro.svg
+    :target: https://pypi.python.org/pypi/astwro/
+.. |pythons badge| image:: https://img.shields.io/pypi/pyversions/astwro.svg
+    :target: https://pypi.python.org/pypi/astwro/
 
 Welcome to astwro |release| documentation!
 ==========================================

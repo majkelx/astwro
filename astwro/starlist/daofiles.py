@@ -209,7 +209,7 @@ def dump_dao_hdr(hdr, line_prefix=''):
     returns two line string representation of header dictionary
     :param dict hdr: dao header dictionary like StarList.DAO_hdr
     :param str line_prefix: add this prefix at beginning of every line (e.g. comment char)
-    :rtype str
+    :rtype:str
     """
     first_line = ''
     second_line = ''
@@ -244,6 +244,7 @@ def write_dao_header(hdr, stream, line_prefix=''):
 
 def _write_table(starlist, file, dao_type):
     # preapre columns (from daotype in order but only existing in starlist)
+    pd.options.mode.chained_assignment = None  # default='warn'
     columns = [c for c in dao_type.columns if c in starlist.columns]
     coltypes = [_get_col_type(dao_type.extension, c) for c in columns]
     towrite = starlist[columns]

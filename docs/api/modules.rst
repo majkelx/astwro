@@ -10,6 +10,3 @@ API Reference
     tools
     utils
     sampledata
-    messages_11
-    query
-    validation

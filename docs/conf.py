@@ -67,7 +67,7 @@ author = u'Mikolaj Kaluszynski, Astronomical Institute of Wroclaw University'
 # release = u'{}.{}.{}'.format(*v.__version_info__)
 
 # The short X.Y version.
-__version_info__ = (0, 5, 2)
+__version_info__ = (0, 5, 3)   ## Change also in ../astwro/version.py
 version = u'{}.{}'.format(*__version_info__)
 # The full version, including alpha/beta/rc tags.
 release = u'{}.{}.{}'.format(*__version_info__)
@@ -165,6 +165,11 @@ texinfo_documents = [
      author, 'astwro', 'One line description of project.',
      'Miscellaneous'),
 ]
+
+
+# mystuff
+autodoc_member_order = 'bysource'
+autoclass_content = 'both'
 
 
 
