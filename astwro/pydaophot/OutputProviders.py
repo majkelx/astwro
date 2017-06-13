@@ -6,7 +6,7 @@ from astwro.starlist import read_dao_file
 # TODO: check for failure on all providers (raise_if_error)
 
 class AbstractOutputProvider(object):
-    """ Abstract class (interface) for chained stream processing """
+    # Abstract class (interface) for chained stream processing
     def _get_output_stream(self):
         """To be overridden"""
         pass
@@ -29,8 +29,8 @@ class StreamKeeper(AbstractOutputProvider):
 
 
 class OutputProvider(AbstractOutputProvider):
-    """ Base class for elements of stream processors chain
-        also can be used as dummy processor in chain"""
+    # Base class for elements of stream processors chain
+    #    also can be used as dummy processor in chain
 
     def __init__(self, prev_in_chain=None):
         self.__stream = None
@@ -72,7 +72,7 @@ class OutputProvider(AbstractOutputProvider):
 
 
 class OutputLinesProcessor(OutputProvider):
-    """ Base for line-by-line processing"""
+    # Base for line-by-line processing
 
     def _process_line(self, line, counter):
         """ processes line by line output
@@ -171,7 +171,7 @@ class DPOP_OPtion(DaophotCommandOutputProcessor):
 
     @property
     def options(self):
-        """returns dictionary of options: XX: 'nnn.dd'
+        """Dictionary of options: XX: 'nnn.dd'
            keys are two letter option names
            values are strings"""
         if self.__options is None:
@@ -500,17 +500,18 @@ class AsOp_result(OutputBufferedProcessor):
 
     @property
     def stars_no(self):
-        """returns tuple: (disappeared_stars, converged_stars)"""
+        # type: () -> (int,int)
+        """tuple: (converged_stars, disappeared_stars)"""
         if self.__stars is None:
             buf = self.get_buffer()
             match = r_alls.findall(buf)
-            if len(match) == 1:
+            if len(match) < 1:
                 self.__stars = 0, 0  # error or sth
             else:
                 res = match[-1][-2:]  # last occurrence, two last values
-                self.__stars = int(res[0]), int(res[1])
+                self.__stars = int(res[1]), int(res[0])
         return self.__stars
 
     def raise_if_error(self):
-        if not self.stars_no > 0:
+        if not self.stars_no[0] > 0:
             raise Exception('allstar: No stars')

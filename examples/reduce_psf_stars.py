@@ -108,7 +108,7 @@ while winner_score < prev_winner_score:
             'n': len(log),
             'conv_stars': len(conv_stars), # converged by allstar
             'psf_stars': len(psf_stars),   # pdf stars
-            'als_chi': conv_stars['psf_chi'].mean(),  # mean of chi form ALS
+            'als_chi': conv_stars['chi'].mean(),  # mean of chi form ALS
             'psf_chi': d.PSf_result.chi,    # chi from daophot PS
             'removed_star': 0
         }

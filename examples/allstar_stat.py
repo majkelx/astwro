@@ -26,8 +26,8 @@ def main(**kwargs):
     al = Allstar(dir=dp.dir)
     al.ALlstar()
     all_s = al.ALlstars_result
-    print(sigmaclip(all_s.psf_chi)[0].mean())
-    all_s.hist('psf_chi')
+    print(sigmaclip(all_s.chi)[0].mean())
+    all_s.hist('chi')
 
     # 2 write regions
     # if args.regions:

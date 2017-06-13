@@ -28,8 +28,8 @@ def __do(args):
     al = allstar(dp.dir)
     al.run()
     all_s = read_dao_file(al.file_from_runner_dir(fname.ALS_FILE))
-    # all_s.hist('psf_chi')
-    return sigmaclip(all_s.psf_chi)[0].mean()
+    # all_s.hist('chi')
+    return sigmaclip(all_s.chi)[0].mean()
 
     # 2 write regions
     # if args.regions:

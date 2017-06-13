@@ -4,11 +4,17 @@ import pandas as pd
 from collections import namedtuple
 from itertools import chain
 
-# TODO: conversions of types, apply automatically on write
-
 class DAO(object):
     FType = namedtuple('DAOFileType', ['columns', 'extension', 'NL', 'read_cols'])
-    CType = namedtuple('DAOColumnType', ['name', 'format', 'NaN'])
+    class CType:
+        """Column specification"""
+        def __init__(self, name, format, NaN, default=None, optional=False):
+            self.name = name
+            self.format = format
+            self.NaN = NaN
+            self.default = default
+            self.optional = optional
+
     UNKNOWN_FILE = FType(
         columns   = ['id'] + range(1, 100),  # id then unknown columns
         extension = '.stars',
@@ -16,44 +22,44 @@ class DAO(object):
         read_cols=None,
     )
     COO_FILE = FType(
-        columns   = ['id', 'x', 'y', 'mag_rel_to_threshold', 'sharp', 'round', 'round_marg'],
+        columns   = ['id', 'x', 'y', 'rmag', 'fsharp', 'round', 'mround'],
         extension = '.coo',
         NL = 1,
         read_cols=None,
     )
     AP_FILE_ODD = FType(   # odd rows columns (used in read)
-        columns   = ['id', 'x', 'y'] + ['A{:X}'.format(n) for n in range(1,13)],  # id,x,y,A1,A2,..,AC
+        columns   = ['id', 'x', 'y', 'mag'] + ['A{:X}'.format(n) for n in range(2,13)],  # id,x,y,mag,A2,A3,..,AC
         extension = '',
         NL = 2,
         read_cols=None,
     )
     AP_FILE_EVEN = FType(  # even rows columns (used in read)
-        columns   = ['sky', 'sky_err', 'sky_skew'] + ['A{:X}_err'.format(n) for n in range(1,13)],
+        columns   = ['sky', 'sky_err', 'sky_skew', 'mag_err'] + ['A{:X}_err'.format(n) for n in range(2,13)],
         extension='',
         NL=2,
         read_cols=None,
     )
     AP_FILE = FType(  # (used in write)
-        # id,x,y,A1,A2,..,AC,asky,asky_err,asky_skew,A1_err,...,AC_err
+        # id,x,y,mag,A2,..,AC,asky,asky_err,asky_skew,mar_err, A2_err,A3_err,...,AC_err
         columns   = AP_FILE_ODD.columns + AP_FILE_EVEN.columns,
         extension = '.ap',
         NL = 2,
         read_cols=None,
     )
     LST_FILE = FType(
-        columns   = ['id', 'x', 'y', 'mag1', 'err1', 5],
+        columns   = ['id', 'x', 'y', 'mag', 'mag_err', 'd'],
         extension = '.lst',
         NL = 3,
         read_cols=None,
     )
     NEI_FILE = FType(
-        columns   = ['id', 'x', 'y', 'mag1', 4],
+        columns   = ['id', 'x', 'y', 'mag', 'sky'],
         extension = '.nei',
         NL = 3,
         read_cols=5,
     )
     ALS_FILE = FType(
-        columns   = ['id', 'x', 'y', 'mag_rel_psf', 'mag_rel_psf_err', 'sky', 'psf_iter', 'psf_chi', 'psf_sharp'],
+        columns   = ['id', 'x', 'y', 'mag', 'mag_err', 'sky', 'iter', 'chi', 'sharp'],
         extension = '.als',
         NL = 1,
         read_cols=None,
@@ -65,11 +71,13 @@ class DAO(object):
         read_cols = 2,
     )
     SHORT_FILE = FType(   # Filetype for all_stars files in Bialkow workflow
-        columns=['id', 'x', 'y', 'mag_rel_psf', 'mag_rel_psf_err'],
+        columns=['id', 'x', 'y', 'mag', 'mag_err'],
         extension='.all_stars',
         NL=1,
         read_cols=None,
     )
+
+
     file_types = {
         COO_FILE.extension: COO_FILE,
         AP_FILE.extension: AP_FILE,
@@ -86,24 +94,49 @@ class DAO(object):
     # - column:str
     # when searching for column details, first lookup is for pair (filetype:FType.extension, column:str), if not found
     # lookup for column:str (column definition shared by file types), eventually for '_default'
+
     _static_columns = {
         '_default':     CType('_default', '{:9.3f}', [-9.999]),
         'id':           CType('id', '{:7.0f}', [0]),
-        'mag_rel_psf':  CType('mag_rel_psf', '{:9.4f}', [-9.999]),
-        'mag_rel_psf_err':  CType('mag_rel_psf_err', '{:9.4f}', [-9.999]),
-        'psf_iter':     CType('psf_iter', '{:9.1f}', [-9.999]),
-        'sky_err':      CType('sky_err', '{:6.2f}', [-9.99]),
-        'sky_skew':     CType('sky_skew', '{:6.2f}', [-9.99]),
-        ('.ap', 'id'): CType('id', '\n{:7.0f}', [0]),         # new linie in AP files
+        ('.als','mag'): CType('mag', '{:9.4f}', [99.999]),
+        ('.als','mag_err'):   CType('mag_err', '{:9.4f}', [9.9999], default=0.0),
+        'iter':         CType('iter', '{:8.0f}.', [-9.999], default=0.0),
+        'chi':          CType('chi', '{:9.3f}', [-9.999], default=0.0),
+        'sharp':        CType('sharp', '{:9.3f}', [-9.999], default=0.0),
+        'sky_err':      CType('sky_err', '{:6.2f}', [-9.99], default=0),
+        'sky_skew':     CType('sky_skew', '{:6.2f}', [-9.99], default=0),
+        ('.ap','mag'): CType('mag', '{:9.3f}', [99.999,-99.999,94.999]),
+        ('.ap','mag_err'):   CType('mag_err', '{:8.4f}', [9.9999], default=0.0),
+        ('.ap', 'id'):  CType('id', '\n{:7.0f}', [0]),         # new linie in AP files
         ('.ap', 'sky'): CType('sky', '\n{:14.3f}', [-9.999]),  # new linie in AP files
     }
-    # add A0, A1,... and A0_err, A1_err,...
-    _apert_columns = dict([(col, CType(col, '{:9.3f}', [99.999,-99.999])) for col in ('A{:X}'.format(i) for i in range(1,13))])
-    _ap_err_columns = dict([(col, CType(col, '{:8.4f}', [9.9999])) for col in ('A{:X}_err'.format(i) for i in range(1,13))])
+    # add A2, A3,... and A2_err, A3_err,...
+    _apert_columns = dict([(col, CType(col, '{:9.3f}', [99.999,-99.999,94.999], optional=True))
+                           for col in ('A{:X}'.format(i) for i in range(2,13))])
+    _ap_err_columns = dict([(col, CType(col, '{:8.4f}', [9.9999], optional=True))
+                            for col in ('A{:X}_err'.format(i) for i in range(2,13))])
     # dict union
     columns = dict(chain.from_iterable(d.items() for d in (_static_columns, _apert_columns, _ap_err_columns)))
 
+
 DAO_file_firstline = ' NL    NX    NY  LOWBAD HIGHBAD  THRESH     AP1  PH/ADU  RNOISE    FRAD'
+
+def convert_dao_type(starlist, new_daotype, update_daotype=True):
+        # type: (StarList, DAO.FType) -> bool
+    """Converts from one daotype to another
+
+    Only subset of conversions supported. You can also provide own map (directory) of column names"""
+    for col in new_daotype.columns:
+        if col not in starlist.columns:
+            ct = _get_col_type(new_daotype.extension, col)
+            if not ct.optional:
+                if ct.default is None:
+                    return False
+                else:
+                    starlist.loc[:, col] = ct.default # new col
+    if update_daotype:
+        starlist.DAO_type = new_daotype
+    return True
 
 
 def read_dao_file(file, dao_type = None):
@@ -142,10 +175,13 @@ def write_dao_file(starlist, file, dao_type=None):
     :rtype: None
     """
     if dao_type is None:
+        if starlist.DAO_type is None:
+            raise Exception('Can not determine file format')
         dao_type = starlist.DAO_type
-    if dao_type is None:
-        dao_type = DAO.UNKNOWN_FILE
-
+    elif dao_type != starlist.DAO_type:
+        converted = convert_dao_type(starlist, dao_type, update_daotype=False)
+        if not converted:
+            raise Exception('Can not convert columns {} into {} '.format(starlist.columns, dao_type.columns))
     _write_file(starlist, file, dao_type)
 
 def _get_col_type(file_ext, column):
@@ -212,7 +248,7 @@ def _write_table(starlist, file, dao_type):
     coltypes = [_get_col_type(dao_type.extension, c) for c in columns]
     towrite = starlist[columns]
 
-    for i, row in starlist.iterrows():
+    for i, row in towrite.iterrows():
         for col, coltype, val in zip(columns, coltypes, row):
             if pd.isnull(val):
                 val = coltype.NaN[0]

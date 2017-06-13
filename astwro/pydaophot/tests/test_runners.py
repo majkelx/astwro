@@ -30,9 +30,9 @@ class TestRunners(unittest.TestCase):
         d.PIck()
         d.PSf()
         d.run()
-        a = Allstar(dir=d.dir)
+        a = Allstar(dir=d.dir, image=self.image)
         a.ALlstar(stars='i.nei')
-        self.assertGreater(a.ALlstars_result.stars_no, 0)
+        self.assertTrue(a.ALlstars_result.success)
 
     def test_execution_psf_pipeline(self):
         d = Daophot(image=self.image, batch=True)

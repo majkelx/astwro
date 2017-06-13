@@ -60,3 +60,13 @@ def test_write_ap():
 def test_write_als():
     check_readwritereadqueals(data.als_file())
 
+def test_convert_ap_to_als():
+    s1 = sl.read_dao_file(data.als_file())
+    d = tmpdir()
+    f2 = path.join(d.path, 'tmp' + '.als')
+    sl.write_dao_file(s1, f2, sl.DAO.ALS_FILE)
+    s2 = sl.read_dao_file(f2)
+    cols_to_compare = ['id', 'x', 'y', 'mag', 'sky']
+    assert s1.round(4)[cols_to_compare].equals(s2.round(4)[cols_to_compare])
+
+

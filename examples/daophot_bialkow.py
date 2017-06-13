@@ -35,11 +35,11 @@ def lstcorr(mult, err, psf, phase):
 
 
 def daophot_photometry(
-        image,
-        all_stars,
-        psf_stars,
-        IMGPATH = '.',
-        OUTPATH = '.',
+        image,     # filename without path
+        all_stars, # filename with path
+        psf_stars, # filename with path
+        IMGPATH = '.', # patch to image
+        OUTPATH = '.', # patch for output files
         logfile = 'run.log',
         INPUT = None,
         NPSFV=15,  # minimal nuber of stars for variable PSF
@@ -88,7 +88,7 @@ def daophot_photometry(
 
 
     if not INPUT:
-        INPUT = path.join(path.dirname(__file__), 'daophot_bialkow_input')
+        INPUT = path.join(path.dirname(__file__), 'daophot_bialkow_input')  # for tests only
 
     log.log(PROGRESS,
         '*************************************\n'
@@ -129,7 +129,7 @@ def daophot_photometry(
     all_ap = sdaophot.PHotometry_result.photometry_starlist
     psf_idx = astwro.starlist.read_dao_file(psf_stars)
     psf_ap = all_ap.loc[psf_idx.index]                         # pandas style select from all_ap which in psf_idx
-    psf_ap = psf_ap[(psf_ap.A1 > 1.0) & (psf_ap.A1_err < 0.1)] # minmag and maxerr filtering
+    psf_ap = psf_ap[(psf_ap.mag > 1.0) & (psf_ap.mag_err < 0.1)] # minmag and maxerr filtering
 
     if psf_ap.count() < NPSFC:
         raise Exception('There are not enough stars for PSF estimation: {}'.format(psf_ap.count()))
@@ -206,12 +206,12 @@ def daophot_photometry(
     sallstar.ALlstar(stars='i.grp')  #phot.par
     # idxecorr ${LIMMAGE} i.als i.tmp
     als = sallstar.ALlstars_result.als_stars
-    als = als[als.mag_rel_psf_err < LIMMAGE]
+    als = als[als.mag_err < LIMMAGE]
     sdaophot.GRoup(photometry=als, critical_overlap=0.1)  # photgrp.par
     sdaophot.run()
-    sallstar.ALlstar(stars='i.grp')  #phot.par
+    sallstar.ALlstar(stars='i.grp', subtracted_image_file='is.fits')  #phot.par
     # photsrt.par
-    pphot = sallstar.ALlstars_result.als_stars.sort_values('mag_rel_psf')
+    pphot = sallstar.ALlstars_result.als_stars.sort_values('mag')
     #rmsf 200 i.idx
     #if !(-e i.idx) then
     if pphot.count() < 200:  ## what limit is equiv of rmsf 200 i.idx ?
@@ -222,7 +222,7 @@ def daophot_photometry(
 
     astwro.starlist.write_dao_file(pphot, path.join(OUTPATH, im_name+'.pphot'))
     sdaophot.copy_from_runner_dir('i.psf', path.join(OUTPATH, im_name+'.psf'))
-    sdaophot.copy_from_runner_dir('is.fits', path.join(OUTPATH, im_name+'sub.fits'))
+    sdaophot.copy_from_runner_dir('is.fits', path.join(OUTPATH, im_name+'-sub.fits'))
 
     #  APERTURE PHOTOMETRY WITH NEDA (2.5 * SEEING)
 
@@ -235,8 +235,8 @@ def daophot_photometry(
         raise Exception('Aperture photometry file not created, NEDA!')
     aphot = sdaophot.NEda_result.neda_starlist
     # idxecorr ${LIMMAGE} i.ap1 i.tmp
-    aphot = aphot[aphot.A1_err < LIMMAGE]
-    astwro.starlist.write_dao_file(aphot, im_name+'.aphot')
+    aphot = aphot[aphot.mag_err < LIMMAGE]
+    astwro.starlist.write_dao_file(aphot, im_name+'.aphot', astwro.starlist.DAO.ALS_FILE)
 
     return sdaophot, sallstar, pphot, aphot, psf_idx, psf_ap
 
@@ -253,9 +253,9 @@ if __name__ == '__main__':
                                      " requirements: DAOPHOT/ALLSTAR\n"
                                      " run without arguments works in 'demo' mode on astwro sample data\n",
                                      formatter_class = argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('image', default=None, nargs='?')
-    parser.add_argument('all_stars', default=None, nargs='?')
-    parser.add_argument('psf_stars', default=None, nargs='?')
+    parser.add_argument('image', default=None, nargs='?', help='filename of FITS file, should be in curr dir')
+    parser.add_argument('all_stars', default=None, nargs='?', help='patchname of all stars file')
+    parser.add_argument('psf_stars', default=None, nargs='?', help='patchname of PSF stars file')
     arg = parser.parse_args()
     if any([arg.image, arg.all_stars, arg.psf_stars]):
         if not all([arg.image, arg.all_stars, arg.psf_stars]):
@@ -263,6 +263,9 @@ if __name__ == '__main__':
             parser.print_usage()
             exit(1)
         impath ='.'
+        image = arg.image
+        alls = arg.all_stars
+        psfs = arg.psf_stars
     else:
         # for testing only
         from astwro.sampledata import fits_image, coo_file, lst_file

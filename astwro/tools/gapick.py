@@ -70,7 +70,7 @@ def calc_spectrum(pop):
 def fitness_for_als(als):
     # type: (sl.StarList) -> (float,)
     """Calucalates fitness from allstar result"""
-    return sigmaclip(als.psf_chi)[0].mean(),  # fitness is tuple (val,)
+    return sigmaclip(als.chi)[0].mean(),  # fitness is tuple (val,)
 
 
 def eval_population(population, candidates, workers, show_progress):
@@ -212,9 +212,9 @@ def __do(arg):
     # all stars (filtering by photometry errors and magnitudes)
     stars = photometry.photometry_starlist
     count0 = stars.shape[0]
-    stars = stars[stars.A1 < arg.max_ph_mag]
+    stars = stars[stars.mag < arg.max_ph_mag]
     count1 = stars.shape[0]
-    stars = stars[stars.A1_err < arg.max_ph_err]
+    stars = stars[stars.mag_err < arg.max_ph_err]
     count2 = stars.shape[0]
     logging.info('From {} stars {} left after filtering against {} magnitude threshold, '
                  'then finally {} left after {} photometry threshold'
