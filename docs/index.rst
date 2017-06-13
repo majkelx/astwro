@@ -17,9 +17,9 @@ and some other stuff.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Sample ipython notebook:
+   :caption: pydaophot example in ipython notebook:
 
-   notebooks/deriving_psf_stenson.ipynb
+   notebooks/deriving_psf_stenson
 
 
 API Reference
