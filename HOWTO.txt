@@ -25,4 +25,9 @@
     * create git tag
        $ git tag -a v1.4.4 -m "release 1.4.4"
     * /push to github
-    *
+    * build distribution
+       $ python setup.py bdist_wheel
+    * upload distribution, select newlly build:
+       $ twine upload dist/astwro-0.5.3-py2-none-any.whl
+    * incrase version! Let everythin new in github has new version over release.
+

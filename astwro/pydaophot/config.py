@@ -3,9 +3,9 @@ __metaclass__ = type
 # see https://wiki.python.org/moin/PortingToPy3k/BilingualQuickRef
 
 try:
-    from ConfigParser import ConfigParser, NoOptionError # python 2
+    from ConfigParser import ConfigParser, NoOptionError, NoSectionError # python 2
 except ImportError:
-    from configparser import ConfigParser, NoOptionError # python3
+    from configparser import ConfigParser, NoOptionError, NoSectionError # python3
 import os, shutil, multiprocessing, logging
 from .logger import logger
 
@@ -83,7 +83,7 @@ def find_opt_file(filename, mustexist=True):
     filepath = None
     try:
         filepath = dao_config().get('files', filename)
-    except NoOptionError:
+    except (NoOptionError, NoSectionError):
         # 3. default file
         filepath = os.path.join(get_package_config_path(), filename)
         if not os.path.isfile(filepath):

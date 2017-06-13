@@ -40,6 +40,14 @@ class StarList(pd.DataFrame):
     def DAO_type(self, typ):
         self._DAO_type = typ
 
+    def import_metadata(self, src):
+        """Copies metdata (dao type, dao hdr) from src
+
+        :param StarList src: source of metadata
+        """
+        self.DAO_type = src.DAO_type
+        self.DAO_hdr = src.DAO_hdr
+
     def count(self):
         """returns number of stars in list"""
         return self.shape[0]

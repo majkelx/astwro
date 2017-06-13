@@ -526,8 +526,10 @@ class Daophot(DAORunner):
         if kwargs['add_psf_errors']:
             import pandas as pd
             err = self.PSf_result.errors
-            idx = [i for i,_ in err]
-            val = [v for _,v in err]
-            col = pd.Series(val, index=idx)
-            s['psf_err'] = col
+#            idx = [i for i,_ in err]
+#            val = [v for _,v in err]
+#            col = pd.Series(val, index=idx)
+            new = pd.concat([s, err.loc[:,['psf_err', 'flags']]], axis=1, join_axes=[s.index])
+            new.import_metadata(s)
+            s = new
         return s
