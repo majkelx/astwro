@@ -6,3 +6,4 @@ recursive-include . README.rst
 
 # Include the data files
 recursive-include astwro/sampledata *
+recursive-include astwro/pydaophot/config *

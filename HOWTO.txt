@@ -23,7 +23,7 @@
     * run tests
     * commit to git
     * create git tag
-       $ git tag -a v1.4.4 -m "release 1.4.4"
+       $ git tag -a v0.5.5 -m "release 0.5.5"
     * /push to github
     * build distribution
        $ python setup.py bdist_wheel
