@@ -26,6 +26,7 @@ and some other stuff.
 
    installation
    pydaophot
+   tools
 
 .. toctree::
    :maxdepth: 1

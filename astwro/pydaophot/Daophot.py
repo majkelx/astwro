@@ -29,7 +29,7 @@ class Daophot(DAORunner):
     :var DpOp_SOrt        SOrt_result:       results of command SOrt    (not implemented)
     :var DpOp_SUbstar     SUbstar_result:    results of command SUbstar 
     :var str image:  image which will be automatically ATTACHed before every run
-    :var  options: options which will be automatically added as OPTION command before every run,
+    :var options: options which will be automatically added as OPTION command before every run,
                     can be either:
                                 dictionary:
                                                         >>> dp = Daophot()
@@ -55,9 +55,8 @@ class Daophot(DAORunner):
                                    Do not set WATCH PROGRESS to sth else than -2
         :param bool batch:         whether Daophot have to work in batch mode. 
         """
-        self.OPtion_result = None  #: Results of command OPtion  or initial options reported by `daophot`
         if daophotopt is not None:
-            self.daophotopt = daophotopt  #:str: daophotopt.opt file to be copied to *runner dir*
+            self.daophotopt = daophotopt
         else:
             self.daophotopt = find_opt_file('daophot.opt')
 
@@ -146,6 +145,12 @@ class Daophot(DAORunner):
                                         ``dp.set_options('opts/newallstar.opt')``
                                         
             .. warning:: Do not set `WATCH PROGRESS` to something else than -2
+
+        :param options: described above
+        :param value: value if `options` is just single key
+        :return: results object also accessible as `Daophot.OPtion_result` property
+        :rtype: DPOP_OPtion
+
         """
         if isinstance(options, str) and value is None:  # filename
             # allstar operates in his tmp dir and has limited buffer for file path
@@ -217,7 +222,8 @@ class Daophot(DAORunner):
         Adds daophot OPTION command to execution queue. Available only in "batch" mode. 
         
         Use :meth `set_options()` for options which are set after daophot process start
-        :param options: can be either:
+
+        Parameter `oprions` can be either:
                 dictionary:
                                         >>> dp = Daophot(mode = "batch")
                                         >>> dp.OPtions({'GAIN': 9, 'FI': '6.0'})
@@ -227,6 +233,8 @@ class Daophot(DAORunner):
                                         >>> dp.OPtions('GA', 9.0)
                 filename string of daophot.opt-formatted file:
                                         >>> dp.OPtions('config/pydaophot.opt')
+
+        :param options: described above
         :param value: value if `options` is just single key
         :return: results object also accessible as `Daophot.OPtion_result` property
         :rtype: DPOP_OPtion  
@@ -265,9 +273,9 @@ class Daophot(DAORunner):
         """
         Runs (or adds to execution queue in batch mode) daophot PHOTOMETRY command. 
         
-        Either :param photoopt or :param photo_is, :param OS and :param photo_ap have to be set.
-        :param [str] photoopt: photo.opt file to be used, default: none 
-                    (provide :param photo_is, :param OS and :param photo_ap)
+        Either :py:attr:`photoopt` or :param photo_is, :param OS and :param photo_ap have to be set.
+
+        :param [str] photoopt: photo.opt file to be used, default: none  (provide :param photo_is, :param OS and :param photo_ap)
         :param float IS: inner sky radius, overwrites :param photoopt file value IS
         :param float OS: outer sky radius, overwrites :param photoopt file value OS
         :param [list] apertures: apertures radius, up to 12, overwrites :param photoopt file values A1, A2, ...
@@ -276,7 +284,7 @@ class Daophot(DAORunner):
         :return: results object also accessible as `Daophot.PHotometry_result` property
         :rtype: DpOp_PHotometry
         
-        .. seealso::  :py:method:`astwro.daophot.Daophot.NAda`
+        .. seealso::  :meth:`NEda`
         """
         # TODO: When PSF file is found, new daophot uses it and behaves differently,
         # TODO: this should be implemented as an optional parameter,
@@ -321,7 +329,7 @@ class Daophot(DAORunner):
         
         :param int: number_of_stars_to_pick
         :param float faintest_mag: instrumental magnitude for the faintest star considered to be picked
-        :param str photometry: input magnitudes file, usually from aperture photometry done by :func:`PHotometry`.
+        :param str photometry: input magnitudes file, usually from aperture photometry done by :meth:`PHotometry`.
         :param str picked_stars_file: output list of picked stars, default: i.lst 
         :return: results object also accessible as :var:`Daophot.PIck_result` property
         :rtype: DpOp_PIck
