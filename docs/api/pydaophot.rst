@@ -3,8 +3,6 @@
 .. automodule:: astwro.pydaophot
    :members:
 
-For more information, consult |pydaophot| also.
-
 Runner classes
 **************
 :class:`Daophot` and :class:`Allstar` are wrappers of `daophot` and `allstar` tools.

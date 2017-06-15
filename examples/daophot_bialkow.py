@@ -197,7 +197,7 @@ def daophot_photometry(
         raise Exception('DAOPHOT cannot create PSF !')
     # rmsf 160 i.grp
     # if !(-e i.grp) cp i.ap i.grp
-    if sdaophot.GRoup_result.stars < 160:   ## what limit is equiv of rmsf 160 i.grp ?
+    if sdaophot.GRoup_result.stars < 5:   ## what limit is equiv of rmsf 160 i.grp ?
         sdaophot.copy_to_runner_dir(sdaophot.file_from_runner_dir('i.ap'), 'i.grp')
     hx, hy = sdaophot.PSf_result.hwhm_xy
 

@@ -20,6 +20,6 @@ IO of daophot/allstar files
 
 
 IO of ds9 files
-***************************
+***************
 .. automodule:: astwro.starlist.ds9
    :members:
