@@ -3,7 +3,7 @@
 .. automodule:: astwro.tools
    :members:
 
-Star lists, are objects of class :class:`StarList` which inherits directly from :class:pandas.DataFrame.
+Astwro tools are python scripts, ready to use from command line.
 
 gapick
 ******
