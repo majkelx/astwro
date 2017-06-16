@@ -115,7 +115,7 @@ setup(
     entry_points={
         'console_scripts': [
             'gapick=astwro.tools.gapick:commandline_entry',
-            'grepfits=astwro.tools.grepfits:commandline_entry',
+            'grepfitshdr=astwro.tools.grepfitshdr:commandline_entry',
         ],
     },
 )

@@ -221,9 +221,9 @@ class Daophot(DAORunner):
         """
         Adds daophot OPTION command to execution queue. Available only in "batch" mode. 
         
-        Use :meth `set_options()` for options which are set after daophot process start
+        Use :meth:`set_options()` for options which are set after daophot process start
 
-        Parameter `oprions` can be either:
+        Parameter `options` can be either:
                 dictionary:
                                         >>> dp = Daophot(mode = "batch")
                                         >>> dp.OPtions({'GAIN': 9, 'FI': '6.0'})

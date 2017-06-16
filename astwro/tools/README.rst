@@ -14,5 +14,5 @@ way to find out script purpose and ``main()`` parameters for ones working with p
 Some of the scipts are installed in system by ``pip install astwro``:
 
 * ``gapick``
-* ``grepfits``
+* ``grepfitshdr``
 

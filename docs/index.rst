@@ -26,6 +26,7 @@ and some other stuff.
 
    installation
    pydaophot
+   gapick
    tools
 
 .. toctree::

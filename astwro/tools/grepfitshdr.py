@@ -1,6 +1,9 @@
 #! /usr/bin/env python
 # coding=utf-8
+""" Grep-like tool for FITS headers
 
+    Call commandline: ``grepfitshdr --help`` for parameters info.
+"""
 from __future__ import print_function, division
 
 import astropy.io.fits as pyfits
@@ -61,6 +64,7 @@ def main(pattern, file, **kwargs):
 
 
 def info():
+    """Prints commandline help message"""
     commons.info(__arg_parser())
 
 

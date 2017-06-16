@@ -15,6 +15,7 @@ def test_gapick_short():
         ga_pop = 15,  # small population
         overwrite = True,
         out_dir = d.path,
+        fine = True,
     )
     assert (r.count() > 10)
 

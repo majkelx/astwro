@@ -1,9 +1,26 @@
 #! /usr/bin/env python
 # coding=utf-8
-""" Find best PSF stars using GA to minimize mean error
+""" Find best PSF stars using GA to minimize mean error.
+
+    .. seealso:: :ref:`gapick`
 """
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
+
+# For now:
+# TODO: --neigbours option: once for generation neightbour removal
+# TODO: --timestamp: add current timestamp to directory name (+)
+# TODO: conf option for
+# TODO: warnings about: daophot.opt, allstar.opt
+# TODO: single parameter --aperture, instead of photo.opt
+# TODO: write down text based statistics from logbook.pkl
+# TODO: some docs, and link to them in --help
+# TODO: allstar.opt missing in result dir!
+# For later, on request:
+# TODO: Option for provide own PSF stars set, used for comaprision, including in candidates, put in initial population
+# TODO: Checkpoints - continue calculation
+
+
 
 import os
 import logging
@@ -41,26 +58,26 @@ _time_format = '%a %H:%M:%S'
 # 2.1 Definition of routines used by algorithms: initializations, scoring
 def select_stars(starlist, genome):
     # type: (sl.StarList, bitarray) -> sl.StarList
-    """Select stars present in genome"""
+    #Select stars present in genome
     return starlist[genome.tolist()]
 
 
 def random_genome(ind_class, len, prob):
     # type: (type, int, float) -> bitarray
-    """ Create random genome of length `len` in which probability of '1' on any position is `prob`."""
+    #Create random genome of length `len` in which probability of '1' on any position is `prob`.
     return ind_class([random.random() <= prob for _ in range(len)])
 
 
 def clone_individual(individual):
     # type: (bitarray) -> bitarray
-    """Make a deepcopy-clone - deepcopy genome bitarray and associated fitness"""
+    #Make a deepcopy-clone - deepcopy genome bitarray and associated fitness
     n = deepcopy(individual)
     n.fitness = deepcopy(individual.fitness)
     return n
 
 def calc_spectrum(pop):
-    """calculates 'spectrogram' of population
-    which is a statistic of stars occurrences in population individuals """
+    #calculates 'spectrogram' of population
+    #which is a statistic of stars occurrences in population individuals
     spec = numpy.zeros(len(pop[0]))
     for ind in pop:
         spec += ind.tolist()
@@ -69,16 +86,25 @@ def calc_spectrum(pop):
 
 def fitness_for_als(als):
     # type: (sl.StarList) -> (float,)
-    """Calucalates fitness from allstar result"""
+    #Calucalates fitness from allstar result
     return sigmaclip(als.chi)[0].mean(),  # fitness is tuple (val,)
 
 
-def eval_population(population, candidates, workers, show_progress):
+def eval_population(population, candidates, workers, show_progress, fine_tune):
+    if fine_tune:
+        return eval_population_fine_psf(population, candidates, workers, show_progress)
+    else:
+        return eval_population_simple(population, candidates, workers, show_progress)
+
+
+def eval_population_fine_psf(population, candidates, workers, show_progress):
     # type: (list(bitarray), sl.StarList, list(dict), bool) -> list
-    """ Evaluates fitness for all individual in population. 
-    Uses daophots and allstars processes form `workers` running them in parallel. 
-    :return: list fitnesses (1-element couples as `deap` lib likes)
-    """
+    # Evaluates fitness for all individual in population.
+
+    # This version uses sofisticated process from daophot_bialkow
+    # Uses daophots and allstars processes form `workers` running them in parallel.
+    # :return: list fitnesses (1-element couples as `deap` lib likes)
+
     progress = None
     if show_progress:
         progress = utils.progressbar(total=len(population), step=len(workers))
@@ -89,13 +115,110 @@ def eval_population(population, candidates, workers, show_progress):
     # grouping population into chunks of size `parallel`
     for chunk in izip_longest(*([iter(population)] * len(workers))):
         active = [g is not None for g in chunk]  # all active, on errors some could be deactivated
-        # start daophot workers in
+        # PSF
+        for individual, worker in zip(chunk, workers):
+            if individual:
+                pdf_s = select_stars(candidates, individual)
+                worker['daophot'].write_starlist(pdf_s, 'i.lst')
+                worker['daophot'].PSf(psf_stars='i.lst')  # add to queue only - batch mode
+                worker['daophot'].run(wait=False)  # parallel start all workers without waiting
+        # wait for PSF and start ALLSTAR nei
+        for i, worker in enumerate(workers):
+            if active[i]:
+                worker['daophot'].wait_for_results()  # now wait before using results
+                active[i] = worker['daophot'].PSf_result.converged  # PSF is not always successful
+                if active[i]:
+                    worker['allstar'].ALlstar(stars='i.nei')       # enqueue calculation
+                    worker['allstar'].run(wait=False)  # asynchronous / parallel
+        # second PSF
+        for i, worker in enumerate(workers):
+            if active[i]:
+                worker['allstar'].wait_for_results()
+                if worker['allstar'].ALlstars_result.success:
+                    worker['daophot'].SUbstar(subtract='i.als', leave_in='i.lst')
+                    worker['daophot'].run()  # quick run
+                    worker['daophot'].ATtach('is')
+                    worker['daophot'].PSf(photometry='i.als', psf_stars='i.lst')
+                    worker['daophot'].run(wait=False)
+                else:
+                    active[i] = False
+        # second allstar
+        for i, worker in enumerate(workers):
+            if active[i]:
+                worker['daophot'].wait_for_results()
+                if worker['daophot'].PSf_result.success:
+                    worker['allstar'].ALlstar(stars='i.nei')       # enqueue calculation
+                    worker['allstar'].run(wait=False)  # asynchronous / parallel
+                else:
+                    active[i] = False
+        # third PSF
+        for i, worker in enumerate(workers):
+            if active[i]:
+                worker['allstar'].wait_for_results()
+                if worker['allstar'].ALlstars_result.success:
+                    worker['daophot'].SUbstar(subtract='i.als', leave_in='i.lst')
+                    worker['daophot'].run()  # quick run
+                    worker['daophot'].ATtach('is')
+                    worker['daophot'].PSf(photometry='i.als', psf_stars='i.lst')
+                    worker['daophot'].run(wait=False)
+                else:
+                    active[i] = False
+        # final allstar
+        for i, worker in enumerate(workers):
+            if active[i]:
+                worker['daophot'].wait_for_results()
+                if worker['daophot'].PSf_result.success:
+                    worker['allstar'].ALlstar(stars='als.ap')       # enqueue calculation
+                    worker['allstar'].run(wait=False)  # asynchronous / parallel
+                else:
+                    active[i] = False
+
+        # wait for allstar for workers and process results
+        for i, worker in enumerate(workers):
+            if active[i]:
+                worker['allstar'].wait_for_results()
+                all_s = worker['allstar'].ALlstars_result.als_stars
+                f = fitness_for_als(all_s)
+                fitnesses.append(f)  # fitness is tuple (val,)
+                f_max = max(f_max, f)
+            else:
+                fitnesses.append(None)
+        # cut fitnesses if longer than population
+        # (finesses mod parallel == 0, some None at the end can appear if population mod parallel != 0)
+        fitnesses = fitnesses[:len(population)]
+        # fill gaps in fitnesses by maximum of rest of population
+        for i, f in enumerate(fitnesses):
+            if f is None:
+                fitnesses[i] = f_max
+        if progress:
+            progress.print_progress()
+
+    return fitnesses
+
+
+def eval_population_simple(population, candidates, workers, show_progress):
+    # type: (list(bitarray), sl.StarList, list(dict), bool) -> list
+    # Evaluates fitness for all individual in population.
+    # Uses daophots and allstars processes form `workers` running them in parallel.
+    # :return: list fitnesses (1-element couples as `deap` lib likes)
+
+    progress = None
+    if show_progress:
+        progress = utils.progressbar(total=len(population), step=len(workers))
+        progress.print_progress(0)
+    fitnesses = []
+    f_max = None
+    # https://docs.python.org/3/library/itertools.html#itertools-recipes grouper()
+    # grouping population into chunks of size `parallel`
+    for chunk in izip_longest(*([iter(population)] * len(workers))):
+        active = [g is not None for g in chunk]  # all active, on errors some could be deactivated
+        # PSF
         for individual, worker in zip(chunk, workers):
             if individual:
                 pdf_s = select_stars(candidates, individual)
                 worker['daophot'].PSf(psf_stars=pdf_s)  # add to queue only - batch mode
                 worker['daophot'].run(wait=False)  # parallel start all workers without waiting
-        # wait for PSF and start allstar for workers
+        # wait for PSF and start ALLSTAR
         for i, worker in enumerate(workers):
             if active[i]:
                 worker['daophot'].wait_for_results()  # now wait before using results
@@ -128,7 +251,7 @@ def eval_population(population, candidates, workers, show_progress):
 
 def _prepare_output_dir(outdir, overwrite, srcdir, arg):
     # type: (str, bool, str, object) -> (utils.CycleFile, utils.CycleFile, utils.CycleFile, str)
-    """Prepare output directory for results"""
+    # Prepare output directory for results
     if outdir:
         from shutil import copytree, rmtree
 
@@ -156,9 +279,8 @@ def _prepare_output_dir(outdir, overwrite, srcdir, arg):
         return None, None, None, None
 
 def __do(arg):
-    """Main routine, common for command line, and python scripts call
-    :type arg: Namespace
-    """
+    # Main routine, common for command line, and python scripts call
+    # :type arg: Namespace
 
     start_time = time.time()
 
@@ -226,11 +348,24 @@ def __do(arg):
     # candidates (filter out big psf errors)
     candidates = dp.read_starlist(arg.psf_stars_file, add_psf_errors=True)
     org_cand_no = candidates.count()
-    candidates = candidates[candidates.psf_err < arg.max_psf_err]
-    logging.info("{} good candidates ({} rejected because psf error exceeded threshold of {})".format(
+    err = dp.PSf_result.errors
+    averr = err.psf_err.mean()
+    err = err[(err.psf_err < arg.max_psf_err_mult*averr) & (err.flag == ' ')]  # filter out big errors and * or ? marked stars
+    candidates = candidates.loc[err.index]
+
+    # candidates = candidates[candidates.psf_err < arg.max_psf_err]  # old filter, new above
+    logging.info(
+        "{} good candidates ({} rejected: * or ? or psf error exceeded max-psf-err-mult*averge-error = {}*{} = {})"
+        .format(
         candidates.count(),
         org_cand_no - candidates.count(),
-        arg.max_psf_err))
+        arg.max_psf_err_mult,
+        averr,
+        arg.max_psf_err_mult * averr)
+    )
+
+    if candidates.count() < 15:
+        logging.error("Number of candidates lass than 15. GA needs more. Sorry")
 
     # Prepare output directory for results
     lst_file, reg_file, gen_file, result_dir = _prepare_output_dir(arg.out_dir, arg.overwrite, str(dp.dir), arg)
@@ -274,7 +409,7 @@ def __do(arg):
     for i in range(arg.parallel):
         d = dp.clone()       # clone previously used daophot
         d.batch_mode = True
-        a = dao.Allstar(dir=d.dir, image=d.image, batch=True)
+        a = dao.Allstar(dir=d.dir, image=d.image, batch=True, options={'MA': 100})
         d.logger = workers_logger
         a.logger = workers_logger
         workers.append({'daophot': d, 'allstar': a})
@@ -306,7 +441,7 @@ def __do(arg):
         ))
 
     # Calculate fitnesses of initial population
-    fitnesses = eval_population(pop, candidates, workers, show_progress=not arg.no_progress)
+    fitnesses = eval_population(pop, candidates, workers, show_progress=not arg.no_progress, fine_tune=arg.fine)
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
 
@@ -336,7 +471,7 @@ def __do(arg):
 
         # calculate fitnesses of new individuals
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = eval_population(invalid_ind, candidates, workers, show_progress=not arg.no_progress)
+        fitnesses = eval_population(invalid_ind, candidates, workers, show_progress=not arg.no_progress, fine_tune=arg.fine)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
         # New population from offspring
@@ -379,8 +514,6 @@ def __do(arg):
     return best_stars
 
 
-# TODO: Checkpoints
-
 def __arg_parser():
     import argparse
     parser = argparse.ArgumentParser(
@@ -414,10 +547,13 @@ def __arg_parser():
                         help='number of stars to PICK as candidates when --stars-to-pick not provided (default: 100)')
     parser.add_argument('--faintest-to-pick', metavar='MAG', type=int, default=20,
                         help='faintest magnitude to PICK as candidates when --stars-to-pick not provided (default: 20)')
-    parser.add_argument('--max-psf-err', metavar='x', type=float, default=0.1,
-                        help='threshold for PSF errors of candidates; '
-                             'stars for which error found be PSF command is greater than x will be rejected '
-                             '(default 0.1)')
+    parser.add_argument('--fine', '-f', action='store_true',
+                        help='fine tuned PSF calculation (3 iter) for crowded fields, without this option no neighbours'
+                             'subtraction will be performed')
+    parser.add_argument('--max-psf-err-mult', metavar='x', type=float, default=3.0,
+                        help='threshold for PSF errors of candidates - multipler of average error; '
+                             'candidates with PSF error greater than x*av_err will be rejected '
+                             '(default 3.0)')
     parser.add_argument('--max-ph-err', metavar='x', type=float, default=0.1,
                         help='threshold for photometry error of stars for processing by allstar; '
                              'stars for which aperture photometry (daophot PHOTO) error is greater than x '
@@ -480,6 +616,7 @@ def main(**kwargs):
 
 
 def info():
+    """Prints commandline help message"""
     commons.info(__arg_parser())
 
 def commandline_entry():
@@ -489,6 +626,8 @@ def commandline_entry():
         print ('astwro.tools '+astwro.tools.__version__)
         exit()
     __stars = __do(__args)  # call main routine - common form command line and python calls
+    if __stars is None:
+        return 1
     if not __args.no_stdout:
         print('\n'.join(map(str, __stars.index)))
     return 0
