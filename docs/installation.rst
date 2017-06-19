@@ -3,8 +3,8 @@
 Installation
 ============
 
-Installation via PyPI
----------------------
+Installation through PyPI
+-------------------------
 
 Use standard pip_ installation:
 
@@ -14,23 +14,23 @@ Use standard pip_ installation:
 
 .. _pip: http://pip.readthedocs.org/
 
-This installs also command line scripts from `astwro.tools`.
+This also installs `astwro.tools` command line scripts.
 
 Dependencies
 ------------
-`astwro` is developed and tested on Python 2.7. Most of the code is written with compatibility with Python 3 in mind,
-so if there will be such need, porting to such version will be made.
+`astwro` is developed and tested on Python 2.7. Most of the code is written with Python 3 compatibility in mind,
+so if there will be such need, the port to that version will be made.
 
-Different submodules have different requirements, common requirements are:
+The different submodules have different requirements, the common requirements are:
 
 * `pandas`
 * `astropy`
 * `scipy`
 
-`pydaophot` module, and tools using it, requires installation of modern Peter B. Stetson's `DAOPHOT` package.
-There is no guarantee however, that your's version will work with `pydaophot`.
+`pydaophot` module, and tools that use it, requires the installation of modern Peter B. Stetson's `DAOPHOT` package.
+However, there is no guarantee that yours version will work with `pydaophot`.
 
-Optimalization of PSF stars set using genetic algorithm (`astwro.tools.gapick.py` tool) uses `deap` GA
+The optimization of PSF stars set using genetic algorithm (`astwro.tools.gapick.py` tool) uses `deap` GA
 package and `bitarray`.
 
 

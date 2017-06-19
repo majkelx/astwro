@@ -4,7 +4,7 @@
 astwro.pydaophot
 ================
 
-Module `astwro.pydaophot` provides interface for Peter B. Stetson's command line tools `daophot` and `allstar`
+The :mod:`astwro.pydaophot` module provides an interface to the command line tools of Peter B. Stetson `daophot` and `allstar`
 
 
 
@@ -13,20 +13,20 @@ Configuration
 
 `pydaophot.cnf` configuration file
 ----------------------------------
-Module `astwro.pydaophot` uses configuration file `pydaophot.cfg`.
+The :mod:`astwro.pydaophot` Module  uses configuration file `pydaophot.cfg`.
 
 On import, pydaophot is looking for `pydaophot.cfg`
-in following directories::
+in the following directories::
 
   /etc/pydaophot/
   ~/.config/pydaophot/
   ./
 
-and reads found files in above order overwriting repeating parameters.
+and reads found files in that order, overwriting repeat parameters.
 
-Default configuration file is included in module:
+The default configuration file is included in the module:
 `[astwro path]/pydaophot/config/pydaophot.cfg`
-which can be used as template for user's own.
+and can be used as template for creating user's own ones.
 
 Default configuration -- default `pydaophot.cfg` file content::
 
@@ -43,93 +43,111 @@ Default configuration -- default `pydaophot.cfg` file content::
 
 Daphot/Allstar `opt`-configuration files
 ----------------------------------------
-Module provides various options to indicate location of following `daophot` configuration files::
+The module provides various options to indicate the location of following `daophot` configuration files::
 
   daophot.opt
   allstar.opt
   photo.opt
 
-Routines looks up the following locations in provided order:
+Routines searches the following locations in the order provided:
 
-* parameter -- constructors if `Daophot` and `Allstar` objects and
-  some routines have parameters to indicate `opt`-files location (e.g. `daophotopt`
-  parameter of `Daophot` constructor). Also scripts command line parameters
-  (e.g. `gapick --photo-opt`) are passed as arguments to appropriate routines.
+* parameter -- constructors of :class:`~astwro.pydaophot.Daophot` and :class:`~astwro.pydaophot.Allstar` objects and
+  some routines, have parameters to indicate the location of `opt`-files (e.g. the `daophotopt`
+  parameter of the :class:`~astwro.pydaophot.Daophot` constructor). Also script's command line parameters
+  (e.g. ``gapick --photo-opt``) are passed as arguments to appropriate routines.
 * working directory -- if working directory of script process (not to be confused with
-  `Daophot` object's working directory!) contains `opt` file, this file will be used.
-* `pydaophot.cfg` -- module configuration file contain section `[files]` where
-  location of `opt` files can be specified.
-* default files -- if module cannot locate `opt` file in locations below, uses
+  :class:`~astwro.pydaophot.Daophot` object's working directory - *runner directory*!) contains `opt` file, this file will
+  be used.
+* `pydaophot.cfg` -- the module configuration file contains section `[files]` where
+  location of the `opt` files can be specified.
+* default files -- if module cannot locate `opt` file in locations below, uses the
   default file located in `[astwro path]/pydaophot/config`.
 
-Note, that present order of searching means, that e.g. working directory
-`daophot.opt` file have priority over one provided in `pydaophot.cfg`.
+Note, that the presented order of searching means, that e.g. the working directory
+`daophot.opt` file have priority over another one provided in  `pydaophot.cfg`.
 
 Files and directories
 =====================
 
 Paths
 -----
-For distinction between python program working directory and underlying `daophot`
-process working directory, following naming convention is used here:
+To distinguish between the working directory of the python program and the working directory
+of the underlying `daophot` process,  the following naming convention is used:
 
-* *runner directory* is the working directory of underlying `daophot` process.
-  It's directory accessible by `Runner.dir` property.
+* *runner directory* is the working directory of the underlying `daophot` process.
+  This directory accessible by the :meth:`Daophot[Allstar].dir.path <astwro.pydaophot.Daophot.dir>` property.
 * *working directory* is current working directory of python program
-  as obtained by `os.getcwd()`.
+  as obtained by :func:`os.getcwd()`.
 
 Runner directory
 ----------------
-Each `Daophot` [#]_ object maintains it's own *runner directory*.
-If directory is not specified in constructor, temporary directory is created.
+Each :class:`~astwro.pydaophot.Daophot` [#]_ object maintains it's own *runner directory*.
+ If directory is not specified in constructor, the temporary directory is created.
 
-.. [#] All information below applies to `Allstar` as well
+.. [#] All information below applies to :class:`~astwro.pydaophot.Allstar` as well
 
-Working directory is accessible by `dir` property.
+The *runner directory* is accessible by the :meth:`Daophot[Allstar].dir.path <astwro.pydaophot.Daophot.dir>`  property.
 
-Working directory of `Daophot` is set as working directory of `daophot` program.
+:class:`~astwro.pydaophot.Daophot`'s *runner directory* is the working directory of `daophot` program.
 
-Specifying files patch
-----------------------
-For all command methods (`FInd, PHotometry,`...) parameters referring to files
-follows rules described below. Understanding those rules is important especially to
-distinguish whether file in *runner directory* or another directory is addressed.
+Specifying the file patch
+-------------------------
+For all command methods (:meth:`~astwro.pydaophot.Daophot.FInd`, :meth:`~astwro.pydaophot.Daophot.PHotometry`, ...)
+parameters that refer to files
+follow the rules described below. Understanding those rules is especially important  to
+distinguish whether the file in *runner directory* or another directory is addressed.
 
-1 All filenames without *path* prefix, addresses files in *runner directory*.
-2 Files with absolute path prefix (i.e. starting with `/`), are... absolute addressed files as expected.
-3 Files with relative (but not empty) path prefix, are relative to *working directory*.
-4 Files with patch prefix starting with `~` (tilde) are relative to user's home directory.
+1. All filenames without *path* prefix, addresses the *runner directory* files.
+2. Files with absolute path prefix (that is, starting with `/`), are... absolute addressed files as expected.
+3. Files with relative (but not empty) path prefix, are relative to *working directory*.
+4. Files with patch prefix starting with `~` (tilde) are relative to the user's home directory.
 
-In other words, file pathnames are quite standard and reltive to script *working directory*, with exception than lack of
+In other words, file pathnames are fairly standard and reltive to script *working directory*, with exception than lack of
 path prefix indicates file in *runner directory*.
 
-During operation, all files has their representation in *runner directory*, and
-underlying `daophot` processes works only on files in that directory. It's
-implemented by creating symlink in *runner directory* for input files and by
-copying output files from *runner directory* into destination directories for
-output files.
+During operation, all files has representation in *runner directory*, and
+underlying `daophot` processes only works on the files in that directory. It's
+implemented by creating symbolic link  in *runner directory* for the input files and
+copying the output files from *runner directory* into destination directories if such external output file is requested.
 
-Runner directory filenames
---------------------------
-To avoid filename conflicts, link/file name in *runner directory* created for external file
+
+Runner directory file names
+---------------------------
+To avoid filename conflicts, the name of link/file in the *runner directory* created for external file
 consists of:
 
-* hash of external pathname and
+* hash of absolute pathname and
 * original filename.
 
 Input files
 -----------
-Because of limited length of directory paths maintained by `daophot` program, for all filepaths provided to 'Daophot'
-object symlink in working directory is created, and this symlink is given to `daophot` as parameter.
+Due to the  limited length of directory paths maintained by the `daophot` program, for all filepaths provided to
+:class:`~astwro.pydaophot.Daophot`
+object, the symbolic link is created in *runner directory*, and this link is given to the `daophot` process instead
+of the original filename. Existing symbolic links of the same name are overwritten (because name is generated
+from absolute patch it's not a problem at all).
 
 Output files
 ------------
-For output files, when filename contain path component, `daophot` is instructed to output into *runner directory*
-file, then this file(s) are copied into path specified by the user.
+For output files, when the filename contains path component, `daophot` is instructed to output into the
+*runner directory*
+file, then, after `daophot` terminates, this file(s) are copied to the path specified by the user.
 
-Note, that in batch mode, copying occurs after execution of all commands in queue. That can have consequences when
-using external file as an output to one command and input of further one. Usually everything should be OK, because
-filenames generated for *runner directory* are deterministic.
+.. Warning::
+    The output files, existing in *runner directory*, are deleted on queuing command. This can lead to unexpected
+    behaviour in ``"batch"`` mode, when mixing input/output files. Consider following example:
+
+.. code:: python
+
+    d.mode = 'batch'
+    d.GRoup(psf_file='i.psf')  # preexisting i.psf (input)
+    d.PSf(psf_file='i.psf')    # deletes i.psf  (output)
+    d.run()                    # GROUP will miss i.psf and fail
+
+.. Note::
+    In the batch mode, the copying occurs after execution of all commands in queue. This can have consequences when
+    using the external file as an output of one command and input of further one. Usually everything should be fine,
+    since the filenames generated for *runner directory* are deterministic as described above.
 
 In the following example
 
@@ -144,9 +162,10 @@ In the following example
     d.PHotometry(stars_file='~/my.coo')
     d.run()
 
-`FInd` command instruct daophot to output into file `1b7afb3.my.coo` in  *runner directory*.
-`PHotometry` command will read file `1b7afb3.my.coo` from  *runner directory*. After all `1b7afb3.my.coo` will
-be copied into `~/my.coo`. But one it's easier to work on files inside *runner directory* explicitly:
+:meth:`~astwro.pydaophot.Daophot.FInd` command instruct daophot to output into file `1b7afb3.my.coo` in  *runner directory*.
+:meth:`~astwro.pydaophot.Daophot.PHotometry` command will read file `1b7afb3.my.coo` from  *runner directory*.
+After all `1b7afb3.my.coo` will
+be copied to `~/my.coo`. Sometimes it's easier to work explicitly on the files inside the *runner directory* :
 
 .. code:: python
 
@@ -175,55 +194,56 @@ or, without specifying names at all
 
 Operation modes - batch and parallel execution
 ==============================================
-`daophot` commands execution regime depends on the operation mode of `Daophot`
-(more general any runner subleasing `Runner` class).
+The  execution regime of `daophot` commands depends on :class:`~astwro.pydaophot.Daophot`'s operation mode
+(this applies to any runner subclassing the :class:`~astwro.pydaophot.Runner` class).
 
 Operation modes
 ---------------
-Property `Runner.mode` (type: `str`) indicates operation mode:
+Property :meth:`Daophot.mode <astwro.pydaophot.Daophot.mode>` (type: `str`) indicates operation mode:
 
-* `"normal"` (default) every command method (`FInd, PHotometry,`...) blocks until
-  underlying `daophot` process completes processing and presents results. That's
-  intuitive behaviour. Usually (see: `Runner.preserve_process`), every command
-  is executed be brand new `daophot` process, which terminates after completion.
+* ``"normal"`` (default) -  Every command method
+  (:meth:`~astwro.pydaophot.Daophot.FInd`, :meth:`~astwro.pydaophot.Daophot.PHotometry`, ...) blocks until
+  the underlying `daophot` process completes processing. That is
+  intuitive behaviour. Every command
+  is executed by brand new `daophot` process, which terminates once the command execution is finished.
 
-  Commands `ATtach` and `OPtions` are not available in `"normal"` mode. Instead
-  use `set_image` and `set_options` methods which adds appropriate daophot
-  commands for execution before every executed command.
-* `"bath"` commands method doesn't trigger underlying `daophot` process. Instead,
-  commands are stored in internal commands queue, and are send to `daophot` for
-  execution together on explicitly called `run()` method. All commands are executed
-  one by one in single `daophot` process, which terminates (until
-  `Runner.preserve_process` is set) after completion of last command.
+  The :meth:`~astwro.pydaophot.Daophot.ATtach` and :meth:`~astwro.pydaophot.Daophot.OPtions` commands
+  are not available in ``"normal"`` mode. Instead
+  use :meth:`~astwro.pydaophot.Daophot.set_image` and :meth:`~astwro.pydaophot.Daophot.set_options` methods
+  that enqueue the appropriate `daophot`
+  commands for execution before any other command.
+* ``"bath"`` - The command methods does not  trigger the underlying `daophot` process. Instead,
+  commands are stored in the internal commands queue and are send to `daophot` for
+  execution together on explicitly called :meth:`~astwro.pydaophot.Daophot.run()` method. All commands are executed
+  one by one in a single `daophot` process, which terminates after completion of the last command.
 
 Asynchronous execution
 ----------------------
-`"bath"` operation mode allows asynchronous execution by passing `wait=False`
-into `run` method. In that case, `wait` method returns immediately after passing
-commands to underlying `daophot` process. Further python program execution runs
-in parallel to `daophot` process.
+The ``"bath"`` operation mode allows asynchronous execution by passing ``wait=False``
+to the :meth:`run(wait=False) <astwro.pydaophot.Daophot.run>` method.
+In that case, the :meth:`~astwro.pydaophot.Daophot.run()` method returns immediately after passing
+the commands to the underlying `daophot` process. Further execution of the Python program runs in parallel
+to the `daophot` process.
 
-User can check whether `daophot` is still processing commands by testing `Runner.running` property.
+The user can check if `daophot` is still processing commands by testing the
+:meth:`Daophot.running <astwro.pydaophot.Daophot.running>` property.
 
 Setting image and options
 =========================
-State of options and attached image are the parameters which persist in
-`daophot` session. In `"normal"` mode each command is executed in separate
-`daophot` process which terminates after command execution, thus set options and
-attached image have to be set before each command execution.
+The `daophot options and the attached image are the parameters that persist in
+`daophot` session. In ``"normal"`` mode each command is executed in a separate
+`daophot` process which terminates after execution of the command, so the configuration options and the
+attached image must be set before each command execution.
 
-`ATtach` and `OPtions` methods enqueues `AT` and `OP` commands like any other
-command methods and are useless in `"normal"` mode.
+The :meth:`~astwro.pydaophot.Daophot.ATtach` and :meth:`~astwro.pydaophot.Daophot.OPtions` methods
+enqueues `ATTACH` and `OPTION` commands like any other
+command methods and are useless in `"normal"`.
+The :meth:`~astwro.pydaophot.Daophot.set_image` and :meth:`~astwro.pydaophot.Daophot.set_options` methods
+should be used instead, which enqueue the appropriate `daophot`
+commands for execution before every command.
 
-`image` and `options`
----------------------
-When `image` or `options` `Daophot` insurance properties are set
-(explicite or by `image` and `options` attributes of constructor), appropriate
-`AT` and/or `OP` commands will be automatically added for execution on the
-beginning of every run. This is preferred method of setting image and options
-for both modes, until multiple `ATTACH` or `OPTION` commands are needed
-between other commands in `"batch"` mode.
 
 Logging
 =======
-`astrwro.pydaophot` uses logger (from `logging`) named 'pydaophot' and it's child loggers.
+The :mod:`astwro.pydaophot` uses the logger (from the :py:mod:`logging`
+module) named ``"pydaophot"`` and it's child loggers.

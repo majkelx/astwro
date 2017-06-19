@@ -38,7 +38,9 @@ class Daophot(DAORunner):
                                                         >>> dp.options = [('GA', 9.0), ('FITTING RADIUS', '6.0')]
                                 filename string of daophot.opt-formatted file:
                                                         >>> dp.options = 'config/pydaophot.opt'
+
     """
+
 
     def __init__(self, dir=None, image=None, daophotopt=None, options=None, batch=False):
         # type: ([str,object], [str], [str], [list,dict], bool) -> Daophot
@@ -53,7 +55,13 @@ class Daophot(DAORunner):
         :param options: if provided OPTION command will be automatically attached
                                    setting options property has same effect; list of tuples or dict.
                                    Do not set WATCH PROGRESS to sth else than -2
-        :param bool batch:         whether Daophot have to work in batch mode. 
+        :param bool batch:         whether Daophot have to work in batch mode.
+
+
+        .. attribute:: dir
+
+            Runner's directory, object of :class:`astwro.utils.TmpDir`, call ``Daophot.dir.path`` for string path to directory
+
         """
         if daophotopt is not None:
             self.daophotopt = daophotopt
@@ -129,26 +137,28 @@ class Daophot(DAORunner):
 
     def set_options(self, options, value=None):
         # type: ([str,dict,list], [str,float]) -> None
-        """ Set option(s) before run. 
+        """
+        Set option(s) before run.
         
-            Options can be either:
-        
-                dictionary:             
-                                        ``dp.set_options({'GAIN': 9, 'FI': '6.0'})``
-                iterable of tuples:     
-                                        ``dp.set_options([('GA', 9.0), ('FITTING RADIUS', '6.0')])``
-                
-                option key, followed by value in 'value' parameter:
-                                        ``dp.set_options('GA', 9.0)``
-                                        
-                filename string of allstar.opt-formatted file (file will be symlinked as `allstar.opt`):
-                                        ``dp.set_options('opts/newallstar.opt')``
-                                        
-            .. warning:: Do not set `WATCH PROGRESS` to something else than -2
+        Options can be either:
+
+        dictionary:
+            ``dp.set_options({'GAIN': 9, 'FI': '6.0'})``
+
+        iterable of tuples:
+                                    ``dp.set_options([('GA', 9.0), ('FITTING RADIUS', '6.0')])``
+
+        option key, followed by value in 'value' parameter:
+                                    ``dp.set_options('GA', 9.0)``
+
+        filename string of allstar.opt-formatted file (file will be symlinked as `allstar.opt`):
+                                    ``dp.set_options('opts/newallstar.opt')``
+
+        .. warning:: Do not set `WATCH PROGRESS` to something else than -2
 
         :param options: described above
-        :param value: value if `options` is just single key
-        :return: results object also accessible as `Daophot.OPtion_result` property
+        :param value: value if :attr:`options` is just single key
+        :return: results object also accessible as :attr:`Daophot.OPtion_result` property
         :rtype: DPOP_OPtion
 
         """
@@ -175,9 +185,9 @@ class Daophot(DAORunner):
         ATtach is enqueued automatically (preferred method
         until multiple ATTACH commands needed in "batch" mode).
         
-        :param str image_file: image to attach file will be symlinked to work dir as `i.fits`,
-                   if None `i.fits` (file or symlink) is expected in working dir
-        :return: DPOP_ATtach instance for getting results: ATtach_result property
+        :param str image_file: image to attach file will be symlinked to work dir as ``"i.fits"``,
+                   if ``None``, `i.fits` (file or symlink) is expected in working dir
+        :return: results object also accessible as :attr:`ATtach_result` property
         :rtype: DPOP_ATtach
         """
         if not self.batch_mode:
@@ -236,7 +246,7 @@ class Daophot(DAORunner):
 
         :param options: described above
         :param value: value if `options` is just single key
-        :return: results object also accessible as `Daophot.OPtion_result` property
+        :return: results object also accessible as :attr:`Daophot.OPtion_result` property
         :rtype: DPOP_OPtion  
         """
         if not self.batch_mode:
@@ -250,12 +260,10 @@ class Daophot(DAORunner):
         """
         Runs (or adds to execution queue in batch mode) daophot ATTACH command.
         
-        :param int frames_av: averaged frames in image (default: 1)
-        :param int frames_sum: summed frames in image (default: 1)
-        :param str starlist_file: output coo file, in most cases do not change default i.coo,
-            rather copy result using
-            >> d.copy_from_work_dir(fname.COO_FILE, dest)
-        :return: results object also accessible as `Daophot.FInd_result` property
+        :param int frames_av: averaged frames in image, default: 1
+        :param int frames_sum: summed frames in image, default: 1
+        :param str starlist_file: output coo file, default: ``"i.coo"``
+        :return: results object also accessible as :attr:`Daophot.FInd_result` property
         :rtype: DpOp_FInd
         """
         self._get_ready_for_commands()  # wait for completion before changes in working dir
@@ -273,14 +281,15 @@ class Daophot(DAORunner):
         """
         Runs (or adds to execution queue in batch mode) daophot PHOTOMETRY command. 
         
-        Either :py:attr:`photoopt` or :param photo_is, :param OS and :param photo_ap have to be set.
+        Either :py:attr:`photoopt` or :attr:`IS`, :attr:`OS` and :attr:`apertures` have to be set.
 
-        :param [str] photoopt: photo.opt file to be used, default: none  (provide :param photo_is, :param OS and :param photo_ap)
-        :param float IS: inner sky radius, overwrites :param photoopt file value IS
-        :param float OS: outer sky radius, overwrites :param photoopt file value OS
-        :param [list] apertures: apertures radius, up to 12, overwrites :param photoopt file values A1, A2, ...
-        :param [str, sl.StarList] stars: input list of stars, default: i.coo 
-        :param [str] photometry_file: output magnitudes file 
+        :param str photoopt: photo.opt file to be used, default: None (provide :attr:`IS`, :attr:`OS` and :attr:`apertures`)
+        :param float IS: inner sky radius, overwrites :attr:`photoopt` file value IS
+        :param float OS: outer sky radius, overwrites :attr:`photoopt` file value OS
+        :param list apertures: apertures radius, up to 12, overwrites :attr:`photoopt` file values A1, A2, ...
+        :param  stars: input list of stars, default: ``"i.coo"``
+        :type stars: str or StarList
+        :param str photometry_file: output magnitudes file
         :return: results object also accessible as `Daophot.PHotometry_result` property
         :rtype: DpOp_PHotometry
         
@@ -329,7 +338,9 @@ class Daophot(DAORunner):
         
         :param int: number_of_stars_to_pick
         :param float faintest_mag: instrumental magnitude for the faintest star considered to be picked
-        :param str photometry: input magnitudes file, usually from aperture photometry done by :meth:`PHotometry`.
+        :param photometry:
+            input magnitudes file or :class:`~astwro.starlist.StarList`, usually from aperture photometry done by :meth:`PHotometry`.
+        :type photometry: str or StarList
         :param str picked_stars_file: output list of picked stars, default: i.lst 
         :return: results object also accessible as :var:`Daophot.PIck_result` property
         :rtype: DpOp_PIck

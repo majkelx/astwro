@@ -9,14 +9,13 @@ Runner classes
 **************
 :class:`Daophot` and :class:`Allstar` are wrappers of `daophot` and `allstar` tools.
 
-
 .. autoclass:: Daophot
-	:show-inheritance:
-	:members:
+    :inherited-members:
+    :members:
 
 .. autoclass:: Allstar
-	:show-inheritance:
-	:members:
+    :inherited-members:
+    :members:
 
 Command Results
 ***************

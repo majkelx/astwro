@@ -27,11 +27,15 @@ from astwro.utils import tmpdir, TmpDir
 
 
 class Runner(object):
-    """ Base class for specyfic runners. Maintains underlying process lifetime, 
-    communication with process (streams, output processors chain), runner dir etc... """
+    """
+    Base class for specific runners.
+
+    Maintains underlying process lifetime,
+    communication with process (streams, output processors chain), runner dir etc...
+    """
 
     class RunnerException(Exception):
-        """Exceptions raised by `Runner` nad subclasses"""
+        """Exceptions raised by `Runner` and subclasses"""
         pass
 
     class ExitError(RunnerException):
@@ -52,7 +56,7 @@ class Runner(object):
     def __init__(self, dir=None, batch=False):
         """
         :param dir: path name or TmpDir object, in not provided new temp dir will be used
-        :param bool batch:      whether Daophot have to work in batch mode.         
+        :param bool batch:      whether Daophot have to work in batch mode.
         """
         self.logger = module_logger.getChild(type(self).__name__)
         self.executable = None
@@ -113,9 +117,11 @@ class Runner(object):
         self.close()
 
     def clone(self):
-        """Clones runner (before or after run).
-        If 'self' have created runner dir itself,  all clones will have own runner dirs
-         copied from 'self'. """
+        """Clones runner
+
+        If *runner directory* was provided in constructor, clone will share the same dir, else, if
+        *runner directory* is temp dir created implicitly by runner, clone will create it's own one, and
+        content of *runner directory* will be copied from source to clone."""
         return deepcopy(self)
 
     def close(self):
@@ -127,7 +133,7 @@ class Runner(object):
     def mode(self):
         """Either "normal" or "batch". In batch mode, commands are not executed but collected
         on execution queue, then run together, in single process, one by one, 
-        triggered by :py:meth:`~Runner.run()` method"""
+        triggered by :py:meth:`run()` method"""
         return 'batch' if self.batch_mode else  'normal'
 
     @mode.setter
@@ -284,6 +290,18 @@ class Runner(object):
         pass
 
     def run(self, wait=True):
+        """
+        Execute commands queue.
+
+        In the "normal" :meth:`mode <mode>` there is no need to call :meth:`run`, because all commands are
+        executed immediately. In "batch" :meth:`mode <mode>`, commands  execution is queued and postponed
+        until :meth:`.run`
+
+        :param bool wait:
+            If false,  :meth:`run` exits without waiting for finishing commands executions (asynchronous processing).
+            Call :meth:`wait_for_results` before accessing results.
+        :return: None
+        """
         self._pre_run(wait)
         try:
             self.__process = sp.Popen([self.executable],
@@ -313,6 +331,7 @@ class Runner(object):
     def is_ready_to_run(self):
         """
         Returns True if there are some commands waiting for run but process was not started yet
+
         :return: bool
         """
         return self.__commands and self.__process is None
@@ -320,9 +339,14 @@ class Runner(object):
     @property
     def running(self):
         """
-        Returns if runner is running: executable was started in async mode, and no output collected yet.
-         Note, that even if executable has finished, output will not be collected and is_running will
-          return True until user asks for results or call wait_for_results()
+        Whether if runner is running
+
+        ``True`` If executable was started in async mode :meth:`run(wait=False) <run>`, and no output collected yet.
+
+        .. Note::
+            Even if executable has finished, output will not be collected and :meth:`running <running>` will
+            return ``True`` until user asks for results or call :meth:`wait_for_results()`
+
         :return: bool
         """
         return self.__process is not None and self.output is None
@@ -330,11 +354,13 @@ class Runner(object):
     def has_finished_run(self):
         """
         Returns True if process has finished and output is available
+
         :return: bool
         """
         return self.output is not None
 
     def wait_for_results(self):
+        """In the "batch" mode, waits for commands completion if :meth:`run(wait=False) <run>` was called """
         if self.running:
             self.__communicate()
         if self.is_ready_to_run():
