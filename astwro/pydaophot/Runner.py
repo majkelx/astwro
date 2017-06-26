@@ -258,7 +258,7 @@ class Runner(object):
         return self._prepare_io_file(data, output=True)
 
     def _prepare_input_file(self, path):
-        # type: ([str,) -> (str, str)
+        # type: (str) -> (str, str)
         return self._prepare_io_file(path, output=False)
 
     def _prepare_io_file(self, path, output):

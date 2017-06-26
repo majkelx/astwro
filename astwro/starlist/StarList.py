@@ -7,6 +7,8 @@ class StarList(pd.DataFrame):
     #
     # StarList properties extending  pd.DataFrame
     _metadata = ['_DAO_hdr', '_DAO_type']
+    _DAO_hdr = None
+    _DAO_type = None
 
     @staticmethod
     def new():

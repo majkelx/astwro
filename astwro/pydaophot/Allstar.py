@@ -43,7 +43,8 @@ class Allstar(DAORunner):
         else:
             self.allstaropt = find_opt_file('allstar.opt')
 
-        self.image = image
+        self.image = self.expand_path(image)
+
         self.options = {'WA': 0}  # suppress animations
         if options:
             self.options.update(dict(options))

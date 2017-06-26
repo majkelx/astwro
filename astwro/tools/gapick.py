@@ -299,18 +299,23 @@ def __do(arg):
 
         logging.warning('No image file argument provided (-h for help), using demonstration image: %s', arg.image)
 
+    # expand patches of file parameters
+    arg.all_stars_file = dao.Daophot.expand_path(arg.all_stars_file)
+    arg.psf_stars_file = dao.Daophot.expand_path(arg.psf_stars_file)
+    arg.photo_opt = dao.Daophot.expand_path(arg.photo_opt)
+
     # get single daophot and ATtach file
     dp = dao.Daophot(image=arg.image)
 
     # all stars file
-    if arg.all_stars_file is None:
+    if not arg.all_stars_file:
         logging.warning('No all-stars-file provided, Stars will be found by daophot FIND (frames av/sum: %d/%d)', arg.frames_av, arg.frames_sum)
         find = dp.FInd(arg.frames_av, arg.frames_sum)
         logging.info('FIND found {} stars, sky estimation: {}, err/dev: {}/{}'.format(find.stars, find.sky, find.err, find.skydev))
         arg.all_stars_file = find.starlist_file
 
     # photometry
-    if arg.photo_opt is None: # no file no problem, but recreate default radius if not provided
+    if not arg.photo_opt: # no file no problem, but recreate default radius if not provided
         if arg.photo_is == 0:
             arg.photo_is = 35
         if arg.photo_os == 0:
@@ -324,7 +329,7 @@ def __do(arg):
                                stars=arg.all_stars_file)
 
     # pick PFS stars candidates
-    if arg.psf_stars_file is None:
+    if not arg.psf_stars_file:
         pick = dp.PIck(arg.stars_to_pick, arg.faintest_to_pick)
         arg.psf_stars_file = pick.picked_stars_file
 

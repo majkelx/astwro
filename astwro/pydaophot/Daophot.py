@@ -68,7 +68,7 @@ class Daophot(DAORunner):
         else:
             self.daophotopt = find_opt_file('daophot.opt')
 
-        self.image = image
+        self.image = self.expand_path(image)
         self.options = {'WA': -2}
         if options:
             self.options.update(dict(options))
@@ -114,6 +114,8 @@ class Daophot(DAORunner):
         if self.OPtion_result is None:
             self.OPtion_result = opt_processor
         self._insert_processing_step('', output_processor=opt_processor, on_beginning=True)
+        # Empty lines to unhang daophot after error (otherwise it waits for corrected input)
+        self._insert_processing_step('\n\n\n')
 
     def _on_exit(self):
         pass
