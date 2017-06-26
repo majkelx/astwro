@@ -1,10 +1,4 @@
 
-.. code:: python
-
-    ## Temporary TODO: remove cell
-    import sys
-    sys.path.append('/Users/michal/projects/astwro')
-
 Deriving a Point-Spread Function in a Crowded Field
 ===================================================
 
@@ -75,7 +69,7 @@ Also, take a look into *runner directory*
 
 .. parsed-literal::
 
-    [35m63d38b_NGC6871.fits[m[m [35mallstar.opt[m[m         [35mdaophot.opt[m[m         i.coo
+    63d38b_NGC6871.fits   allstar.opt      daophot.opt    i.coo
 
 
 We see symlinks to input image and ``opt`` files, and ``i.coo`` - result
@@ -307,16 +301,16 @@ runner:
 
 .. parsed-literal::
 
-    [35m63d38b_NGC6871.fits[m[m@ [35mdaophot.opt[m[m@         i.coo
-    [35mallstar.opt[m[m@         i.ap                 i.lst
+    63d38b_NGC6871.fits       daophot.opt         i.coo
+    allstar.opt               i.ap                 i.lst
 
 
 One may examine and improve ``i.lst`` list of PSF stars. Or use
 ``astwro.tools.gapick.py`` to obtain list of PSF stars optimised by
 genetic algorithm.
 
-*(5) Run PSF *
-==============
+*(5) Run PSF*
+=============
 
 *tell it the name of your complete (sorted renumbered) aperture
 photometry file, the name of the file with the list of PSF stars, and
@@ -410,8 +404,8 @@ unparsed ``daophot`` or ``allstar`` output:
     
 
 
-*(8) EXIT from DAOPHOT and send this new picture to the image display *
-=======================================================================
+*(8) EXIT from DAOPHOT and send this new picture to the image display*
+======================================================================
 
 *Examine each of the PSF stars and its environs. Have all of the PSF
 stars subtracted out more or less cleanly, or should some of them be
@@ -455,10 +449,10 @@ Lookup into runner dir:
 
 .. parsed-literal::
 
-    [35m63d38b_NGC6871.fits[m[m@ i.ap                 i.nei
-    [35mallstar.opt[m[m@         i.coo                i.psf
-    [35mdaophot.opt[m[m@         i.err                is.fits
-    i.als                i.lst                lst.reg
+    63d38b_NGC6871.fits       i.ap                 i.nei
+    allstar.opt               i.coo                i.psf
+    daophot.opt               i.err                is.fits
+    i.als                     i.lst                lst.reg
 
 
 .. code:: python
