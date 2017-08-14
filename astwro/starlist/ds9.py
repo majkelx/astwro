@@ -49,7 +49,7 @@ def write_ds9_regions(starlist, filename,
     Some regions can be visually distinguish by providing additional indexes to select those regions
     with specific attributes
     :param StarList starlist: StarList object to dump
-    :param str filename:      output filename
+    :param str filename:      output filename or stream open for writing
     :param str color:         default color
     :param int width:         default line width
     :param int size:          default radius

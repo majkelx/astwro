@@ -344,7 +344,7 @@ def __do(arg):
     stars = stars[stars.mag_err < arg.max_ph_err]
     count2 = stars.shape[0]
     logging.info('From {} stars {} left after filtering against {} magnitude threshold, '
-                 'then finally {} left after {} photometry threshold'
+                 'then finally {} left after {} photometry error threshold'
                  .format(count0, count1, arg.max_ph_mag, count2, arg.max_ph_err))
     # for the sake of optimisation we write starlist to file to avoid multiple serialization of this list
     # (instead of more obvious providing starlist as the allstar argument)
@@ -444,6 +444,7 @@ def __do(arg):
             arg.ga_max_iter,
             time.strftime(_time_format, time.localtime())
         ))
+        logging.info('{} parallel threads, ETA will be calculated after generation 1'.format(arg.parallel))
 
     # Calculate fitnesses of initial population
     fitnesses = eval_population(pop, candidates, workers, show_progress=not arg.no_progress, fine_tune=arg.fine)

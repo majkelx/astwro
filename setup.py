@@ -116,6 +116,7 @@ setup(
         'console_scripts': [
             'gapick=astwro.tools.gapick:commandline_entry',
             'grepfitshdr=astwro.tools.grepfitshdr:commandline_entry',
+            'ds9reg=astwro.tools.ds9reg:commandline_entry',
         ],
     },
 )

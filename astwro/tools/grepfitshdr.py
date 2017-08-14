@@ -12,7 +12,7 @@ from os.path import isfile
 from sys import exit
 from sys import stdout
 
-import __commons as commons
+import astwro.tools.__commons as commons
 
 
 def headers(filenames):
