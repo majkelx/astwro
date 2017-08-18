@@ -381,6 +381,8 @@ class Runner(object):
         # copy results - output files from runners directory to user specified path
         for f in self.ext_output_files:
             self.copy_from_runner_dir(self._runner_dir_file_name(f), f)
+        # fill chained processors buffers
+        self.__processors_chain_last.get_output_stream()
 
 
     def _get_ready_for_commands(self):

@@ -7,7 +7,7 @@ from astwro.starlist import read_dao_file
 
 class AbstractOutputProvider(object):
     # Abstract class (interface) for chained stream processing
-    def _get_output_stream(self):
+    def get_output_stream(self):
         """To be overridden"""
         pass
 
@@ -22,7 +22,7 @@ class StreamKeeper(AbstractOutputProvider):
         self.stream = stream
         self.runner = runner
 
-    def _get_output_stream(self):
+    def get_output_stream(self):
         if self.stream is None:
             raise Exception('No output stream available, call run() before collecting results.')
         return self.stream
@@ -43,9 +43,9 @@ class OutputProvider(AbstractOutputProvider):
         """
         pass
 
-    def _get_output_stream(self):
+    def get_output_stream(self):
         if self.__stream is None:
-            self.__stream = self._prev_in_chain._get_output_stream()
+            self.__stream = self._prev_in_chain.get_output_stream()
             self._consume(self.__stream)
         return self.__stream
 
@@ -106,7 +106,7 @@ class OutputBufferedProcessor(OutputLinesProcessor):
             To be overridden """
 
     def get_buffer(self):
-        self._get_output_stream()  # tigers processing
+        self.get_output_stream()  # tigers processing
         self.logger.debug("Buffer of output obtained: " + self.__buffer)
         return self.__buffer
 
