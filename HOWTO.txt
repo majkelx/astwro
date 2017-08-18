@@ -20,7 +20,10 @@
 * build new release
 
     * increase version if needed
+        astwro/version.py
+        docs/conf.py
     * run tests
+        pytest
     * commit to git
     * create git tag
        $ git tag -a v0.5.5 -m "release 0.5.5"

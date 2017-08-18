@@ -54,7 +54,7 @@ class StarList(pd.DataFrame):
         """returns number of stars in list"""
         return self.shape[0]
 
-    def renumber(self):
-        """Renumbers starlist (in place), updating `id` column and index to range 1..count"""
-        self.id = range(1, self.count()+1)
+    def renumber(self, start=1):
+        """Renumbers starlist (in place), updating `id` column and index to range start.. start+count"""
+        self.id = range(start, self.count()+start)
         self.index = self.id

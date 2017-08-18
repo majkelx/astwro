@@ -32,6 +32,10 @@ def nei_file():
 def err_file():
     return __sampledata('i.err')
 
+def head_file():
+    """patch of sample ASCII fits header file"""
+    return __sampledata('astrometry.head')
+
 def __sampledata(filename):
     import os
     return os.path.join(os.path.abspath(os.path.dirname(__file__)), filename)
