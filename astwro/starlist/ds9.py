@@ -1,6 +1,6 @@
 from .StarList import StarList
 from .file_helpers import *
-from .daofiles import parse_dao_hdr, write_dao_header, DAO_file_firstline
+from .daofiles import parse_dao_hdr, write_dao_header, DAO_file_firstline, DAO
 import pandas as pd
 import re
 
@@ -60,6 +60,7 @@ def read_ds9_regions(file):
             s = s.append(s_noid)
 
     s.DAO_hdr = hdr
+    s.DAO_type = DAO.XY_FILE
     return s
 
 

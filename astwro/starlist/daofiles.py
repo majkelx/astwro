@@ -76,6 +76,12 @@ class DAO(object):
         NL=1,
         read_cols=None,
     )
+    XY_FILE = FType(   # Filetype for all_stars files in Bialkow workflow
+        columns=['id', 'x', 'y'],
+        extension='.xy',
+        NL=1,
+        read_cols=3,
+    )
 
 
     file_types = {
@@ -85,7 +91,8 @@ class DAO(object):
         NEI_FILE.extension: NEI_FILE,
         ALS_FILE.extension: ALS_FILE,
         ERR_FILE.extension: ERR_FILE,
-        SHORT_FILE.extension: SHORT_FILE
+        SHORT_FILE.extension: SHORT_FILE,
+        XY_FILE.extension: XY_FILE,
     }
 
 
@@ -159,7 +166,7 @@ def read_dao_file(file, dao_type = None):
     return ret
 
 
-def write_dao_file(starlist, file, dao_type=None):
+def write_dao_file(starlist, file, dao_type=None, with_header=True):
     """
     Write StarList object into daophot  file.
     :param starlist: StarList instance to be writen
@@ -182,7 +189,7 @@ def write_dao_file(starlist, file, dao_type=None):
         converted = convert_dao_type(starlist, dao_type, update_daotype=False)
         if not converted:
             raise Exception('Can not convert columns {} into {} '.format(starlist.columns, dao_type.columns))
-    _write_file(starlist, file, dao_type)
+    _write_file(starlist, file, dao_type, with_header=with_header)
 
 def _get_col_type(file_ext, column):
     # type: (str, str) -> DAO.CType
@@ -194,12 +201,15 @@ def _get_col_type(file_ext, column):
     return coltype
 
 
-def _write_file(starlist, file, dao_type):
+def _write_file(starlist, file, dao_type, with_header=True):
     f, to_close = get_stream(file, 'w')
-    if starlist.DAO_hdr is not None:
-        starlist.DAO_hdr['NL'] = dao_type.NL
-        write_dao_header(starlist.DAO_hdr, f)
-        f.write('\n')
+    if with_header:
+        if starlist.DAO_hdr is not None:
+            starlist.DAO_hdr['NL'] = dao_type.NL
+            write_dao_header(starlist.DAO_hdr, f)
+            f.write('\n')
+        else:
+            raise Exception('Attempt to save dao file with header from StarList with DAO_hdr=None')
     _write_table(starlist, f, dao_type)
     close_files(to_close)
 
