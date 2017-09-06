@@ -56,6 +56,5 @@ class StarList(pd.DataFrame):
 
     def renumber(self, start=1):
         """Renumbers starlist (in place), updating `id` column and index to range start.. start+count"""
-        self.sort_index(inplace=True)  # preserve id order
         self.id = range(start, self.count()+start)
         self.index = self.id
