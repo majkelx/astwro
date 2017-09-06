@@ -76,11 +76,17 @@ class DAO(object):
         NL=1,
         read_cols=None,
     )
-    XY_FILE = FType(   # Filetype for all_stars files in Bialkow workflow
+    XY_FILE = FType(   # Filetype for position x,y only files
         columns=['id', 'x', 'y'],
         extension='.xy',
         NL=1,
         read_cols=3,
+    )
+    SKY_FILE = FType(   # Filetype for WCS coordinates file as used by ccd_phot workflow
+        columns=['id', 'x', 'y', 'mag', 'mag_err', 'ra', 'dec'],
+        extension='.sky',
+        NL=1,
+        read_cols=None,
     )
 
 
@@ -112,7 +118,9 @@ class DAO(object):
         'sharp':        CType('sharp', '{:9.3f}', [-9.999], default=0.0),
         'sky_err':      CType('sky_err', '{:6.2f}', [-9.99], default=0),
         'sky_skew':     CType('sky_skew', '{:6.2f}', [-9.99], default=0),
-        ('.ap','mag'): CType('mag', '{:9.3f}', [99.999,-99.999,94.999]),
+        'ra':           CType('ra', ' {:s}', [], default='00:00:00.0000'),
+        'dec':          CType('dec', ' {:s}', [], default='+00:00:00.000'),
+        ('.ap','mag'):  CType('mag', '{:9.3f}', [99.999,-99.999,94.999]),
         ('.ap','mag_err'):   CType('mag_err', '{:8.4f}', [9.9999], default=0.0),
         ('.ap', 'id'):  CType('id', '\n{:7.0f}', [0]),         # new linie in AP files
         ('.ap', 'sky'): CType('sky', '\n{:14.3f}', [-9.999]),  # new linie in AP files
