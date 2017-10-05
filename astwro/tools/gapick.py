@@ -46,6 +46,20 @@ import astwro.utils as utils
 
 _time_format = '%a %H:%M:%S'
 
+def check_arguments(arg):
+    if len(arg.ga_init_prob) > 2:
+        logging.error('--ga_init_prob/-I must be followed by one or two numbers')
+        raise ValueError('To many numbers in ga_init_prob list')
+    if len(arg.ga_init_prob) == 1:
+        arg.ga_init_prob = [arg.ga_init_prob[0], arg.ga_init_prob[0]]
+    if max(arg.ga_init_prob) > 0.99 or min(arg.ga_init_prob) < 0.01:
+        logging.error('--ga_init_prob/-I must be from range [0.01 : 0.99]')
+        raise ValueError('ga_init_prob out of range')
+    if arg.ga_init_prob[0] > arg.ga_init_prob[1]:
+        logging.error('--ga_init_prob/-I a b : a <= b must hold')
+        raise ValueError('ga_init_prob min val larger than max val')
+
+
 
 # Definitions for genetic algorithm:
 # 'individual' - subset of candidates competing with other subsets to be the best in fitness
@@ -62,9 +76,10 @@ def select_stars(starlist, genome):
     return starlist[genome.tolist()]
 
 
-def random_genome(ind_class, len, prob):
-    # type: (type, int, float) -> bitarray
-    #Create random genome of length `len` in which probability of '1' on any position is `prob`.
+def random_genome(ind_class, len, prob_limits):
+    # type: (type, int, [float, float]) -> bitarray
+    #Create random genome of length `len` in which probability of '1' on any position is from `prob_limits` range.
+    prob = random.uniform(prob_limits[0], prob_limits[1])
     return ind_class([random.random() <= prob for _ in range(len)])
 
 
@@ -282,6 +297,7 @@ def __do(arg):
     # Main routine, common for command line, and python scripts call
     # :type arg: Namespace
 
+
     start_time = time.time()
 
     # Configure logging
@@ -291,6 +307,9 @@ def __do(arg):
     chandler.setFormatter(logging.Formatter('%(message)s'))
     clogger.propagate = False
     clogger.addHandler(chandler)
+
+    check_arguments(arg)
+
 
     # image_file
     if arg.image is None:
@@ -334,7 +353,7 @@ def __do(arg):
         arg.psf_stars_file = pick.picked_stars_file
 
     # psf (for errors collection)
-    dp.PSf()
+    dp.PSf(psf_stars=arg.psf_stars_file)
 
     # all stars (filtering by photometry errors and magnitudes)
     stars = photometry.photometry_starlist
@@ -583,13 +602,15 @@ def __arg_parser():
     # parser.add_argument('--checkpoint', '-C', metavar='file.chk', type=str, default=None,
     #                     help='restore evaluation from checkpoint; algorithm saves checkpoint.chk file every generation,'
     #                          ' which allows resuming evolution, even with another parameters')
-    parser.add_argument('--ga_init_prob', '-I', metavar='x', default=0.3, type=float,
+    parser.add_argument('--ga_init_prob', '-I', metavar='x', default=[0.3, 0.8], type=float, nargs='+',
                         help='what portion of candidates is used to initialize GA individuals;'
                              ' e.g. if there is 100 candidates, each of them will be '
                              ' chosen to initialize individual genome with probability x; '
                              ' in other words if x=0.3 first population in GA will contain'
-                             ' individuals with around 30 stars each; try to make size of first population stars'
-                             ' similar to expected number of resulting PDF stars (default: 0.3)')
+                             ' individuals with around 30 stars each; '
+                             ' two numbers (e.g. -I 0.3 0.8) indicates range: for each initial genome'
+                             ' random number from that range will be taken (spreading number of initial stars)'
+                             ' (default: 0.3 0.8)')
     parser.add_argument('--ga_max_iter', '-i', metavar='n', default=50, type=int,
                         help='maximum number of iterations of generic algorithm - generations (default: 50)')
     parser.add_argument('--ga_pop', '-n', metavar='n', default=80, type=int,
