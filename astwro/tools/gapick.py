@@ -592,10 +592,10 @@ def __arg_parser():
     parser.add_argument('--parallel', '-p', metavar='n', type=int, default=8,
                         help='how many parallel processes can be forked; '
                              'n=1 avoids parallelism (default: 8)')
-    parser.add_argument('--out_dir', '-d', metavar='output_dir', type=str, default=None,
+    parser.add_argument('--out_dir', '-d', metavar='output_dir', type=str, default='RESULTS',
                         help='output directory; directory will be created and result files will be stored there;'
                              ' directory should not exist or --overwrite flag should be set'
-                             ' (default: do not produce output files)')
+                             ' (default: RESULTS)')
     parser.add_argument('--overwrite', '-o', action='store_true',
                         help='if directory specified by --out_dir parameter exists, '
                              'then ALL its content WILL BE DELETED')
