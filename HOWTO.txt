@@ -32,5 +32,6 @@
        $ python setup.py bdist_wheel
     * upload distribution, select newlly build:
        $ twine upload dist/astwro-0.5.3-py2-none-any.whl
+       problems? check:  ~/.pypirc, https://packaging.python.org/guides/migrating-to-pypi-org/#uploading
     * incrase version! Let everythin new in github has new version over release.
 

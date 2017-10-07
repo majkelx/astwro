@@ -67,7 +67,7 @@ author = u'Mikolaj Kaluszynski, Astronomical Institute of Wroclaw University'
 # release = u'{}.{}.{}'.format(*v.__version_info__)
 
 # The short X.Y version.
-__version_info__ = (0, 5, 9)   ## Change also in ../astwro/version.py
+__version_info__ = (0, 5, 10)   ## Change also in ../astwro/version.py
 version = u'{}.{}'.format(*__version_info__)
 # The full version, including alpha/beta/rc tags.
 release = u'{}.{}.{}'.format(*__version_info__)

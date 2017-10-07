@@ -30,6 +30,7 @@ def grep(pattern, filenames, output=stdout):
     for h in headers(filenames):
         rep = repr(h).strip()
         for line in rep.splitlines():
+            print (line, file=output)
             if regexp.search(line):
                 matched += 1
                 print(line, file=output)
