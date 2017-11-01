@@ -7,7 +7,7 @@ import sys
 
 
 class ProgressBar(object):
-    def __init__(self, total=100, prefix='', suffix='', decimals=1, bar_length=20, step=0, cleanup=True):
+    def __init__(self, total=100, prefix='', suffix='', decimals=1, bar_length=20, step=1, cleanup=True):
         """
         Create terminal progress bar 
         :param int total: total iterations (Int)
