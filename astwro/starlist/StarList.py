@@ -1,4 +1,5 @@
 import pandas as pd
+from astropy.table import Table
 
 # Subclassing pandas:
 # http://pandas.pydata.org/pandas-docs/stable/internals.html#subclassing-pandas-data-structures
@@ -58,3 +59,39 @@ class StarList(pd.DataFrame):
         """Renumbers starlist (in place), updating `id` column and index to range start.. start+count"""
         self['id'] = range(start, self.count()+start)
         self.index = self.id
+
+    def to_table(self):
+        """
+        Return a :class:`astropy.table.Table` instance
+        """
+        t = Table.from_pandas(self)
+        if self.DAO_hdr is not None:
+            t.meta.update(self.DAO_hdr)
+        if self.DAO_type is not None:
+            t.meta['DAO_type'] = self.DAO_type
+        return t
+
+    @classmethod
+    def from_table(cls, table):
+        """
+        Create a `StarList` from a :class:`astropy.table.Table` instance
+
+        Parameters
+        ----------
+        table : :class:`astropy.table.Table`
+            The astropy :class:`astropy.table.Table` instance
+        Returns
+        -------
+        sl : `StarList`
+            A `StarList`instance
+        """
+        sl = StarList(table.to_pandas())
+        sl.DAO_type = table.meta.get('DAO_type')
+        dao_hdr = {}
+        for key in ['NL', 'NX', 'NY', 'LOWBAD', 'HIGHBAD', 'THRESH', 'AP1', 'PH/ADU', 'RNOISE', 'FRAD']:
+            v = table.meta.get(key)
+            if v is not None:
+                dao_hdr[key] = v
+        if len(dao_hdr) > 0:
+            sl.DAO_hdr = dao_hdr
+        return sl
