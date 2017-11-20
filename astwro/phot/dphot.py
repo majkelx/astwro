@@ -97,6 +97,7 @@ def dphot(data, stddevs, comp_stars_mask = None):
     D = data[comp_stars_mask]
     Wall = stddevs ** -2
     W = Wall[comp_stars_mask]
+    W.unshare_mask()
     W[W.mask] = 0.0 # no more mask for bad values, just zero-weights
     A00 = np.diag(W.sum(axis=0)[1:])
     A11 = np.diag(W.sum(axis=1))

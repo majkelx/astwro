@@ -4,5 +4,5 @@ import logging
 
 # Override to your logger for logging, e.g:
 #      pydaophot.logger = logging.getLogger('root').getChild('pydaophot')
-logger = logging.getLogger('pydaophot')
+logger = logging.getLogger('astwro')
 # logger.addHandler(logging.NullHandler())

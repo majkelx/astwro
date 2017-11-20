@@ -3,7 +3,7 @@ __metaclass__ = type
 # see https://wiki.python.org/moin/PortingToPy3k/BilingualQuickRef
 from .DAORunner import DAORunner
 from .OutputProviders import *
-from .config import find_opt_file
+from .daoconfig import find_opt_file
 
 
 class Allstar(DAORunner):

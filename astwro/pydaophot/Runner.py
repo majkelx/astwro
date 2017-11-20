@@ -20,9 +20,9 @@ except ImportError:
     pass
 
 #from . import logger as module_logger
-from .logger import logger as module_logger
+from astwro.config.logger import logger as module_logger
 from .OutputProviders import StreamKeeper, OutputProvider
-from .config import dao_config
+from astwro.config import get_config
 from astwro.utils import tmpdir, TmpDir
 
 
@@ -151,7 +151,7 @@ class Runner(object):
     def _update_executable(self, exe):
         """Find exe key in configuration and set as Runner executable"""
         if self.executable is None:
-            self.executable = os.path.expanduser(dao_config().get('executables', exe))
+            self.executable = os.path.expanduser(get_config().get('executables', exe))
 
 
     def _prepare_dir(self, dir=None, init_files=True):

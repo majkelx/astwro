@@ -5,7 +5,7 @@ __metaclass__ = type
 import os
 from .DAORunner import DAORunner
 from .OutputProviders import *
-from .config import find_opt_file
+from .daoconfig import find_opt_file
 import astwro.starlist as sl
 
 class Daophot(DAORunner):
