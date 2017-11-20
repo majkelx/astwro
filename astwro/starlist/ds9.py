@@ -68,7 +68,7 @@ def write_ds9_regions(starlist, filename,
                       color='green', width=1, size=8, font=None, label='{id:.0f}',
                       exclude=None, indexes=None, colors=None, sizes=None, labels=None,
                       color_column=None, size_column=None,
-                      comment=None, add_global=None):
+                      comment=None, add_global=None, WCS=False):
     """
     Writes ds9 region file.
     Some regions can be visually distinguish by providing additional indexes to select those regions
@@ -89,6 +89,7 @@ def write_ds9_regions(starlist, filename,
     :param str size_column:   column of starlist with size values
     :param str add_global:    content of additional 'global' if not None
     :param str comment:       content of additional comment line if not None
+    :param bool WCS:          If true, columns `ra` and `dec` will be used and coord. system set to fk5
     Example:
     write_ds9_regions(sl, 'i.reg', color='blue',
                         indexes=[saturated, psf],
@@ -101,6 +102,12 @@ def write_ds9_regions(starlist, filename,
     objects present in index psf will be red and labeled with prefix PSF:
     objects present in index faint will be disabled by '-' sign and not displayed by ds9, but can be parsed back
     """
+    if WCS:
+        xcol = 'ra'
+        ycol = 'dec'
+    else:
+        xcol = 'x'
+        ycol = 'y'
     f, to_close = get_stream(filename, 'w')
     f.write('# Region file format: DS9 version 4.0\n')
     if starlist.DAO_hdr is not None:
@@ -134,5 +141,5 @@ def write_ds9_regions(starlist, filename,
                         c = ' color=' + colors[n]
                     if labels and labels[n] is not None:
                         text = labels[n].format(**row)
-        f.write('circle({},{},{}) #{} text="{}" id={:d}\n'.format(row.x, row.y, s, c, text, i))
+        f.write('circle({},{},{}) #{} text="{}" id={:d}\n'.format(row[xcol], row[ycol], s, c, text, i))
     close_files(to_close)

@@ -22,22 +22,39 @@ def headers(filenames):
             huds[0].verify('silentfix')
             h = huds[0].header
             huds.close()
-            yield h
+            yield h, fname
 
-def grep(pattern, filenames, output=stdout):
+def printmatch(output, filename, line, withfile, fileonly):
+    if not fileonly:
+        if withfile:
+            print (filename + ': ', end='', file=output)
+        print (line, file=output)
+
+
+def grep(pattern, filenames, output=stdout, invert=False, withfile=False, fileonly=False):
+    if isinstance(filenames, str):
+        filenames = [filenames]
     regexp = re.compile(pattern, flags=re.IGNORECASE)
-    matched = 0
-    for h in headers(filenames):
+    globmatched = 0
+    for h, f in headers(filenames):
+        matched = 0
         rep = repr(h).strip()
         for line in rep.splitlines():
-            print (line, file=output)
-            if regexp.search(line):
+            match = regexp.search(line)
+            if invert:
+                match = not match
+            if match:
                 matched += 1
-                print(line, file=output)
-    return matched
+                printmatch(output, f, line, withfile, fileonly)
+                if fileonly:
+                    break
+        globmatched += matched
+        if fileonly:
+            print (f, file=output)
+    return globmatched
 
 def __do(arg):
-    return  grep(arg.pattern, arg.file)
+    return  grep(arg.pattern, arg.file, invert=arg.v, withfile=arg.H, fileonly=arg.l)
 
 
 def __arg_parser():
@@ -53,6 +70,12 @@ def __arg_parser():
                         help='reg-exp, use single dot . to dump all header fields')
     parser.add_argument('file', type=str, nargs='+',
                         help='FITS file(s), catalog file containing file names prefixed by @ can be provided')
+    parser.add_argument('-v', action='store_true',
+                        help='Invert match')
+    parser.add_argument('-H', action='store_true',
+                        help='Add filename to each found line')
+    parser.add_argument('-l', action='store_true',
+                        help='Print filenames with matches only')
     return parser
 
 
