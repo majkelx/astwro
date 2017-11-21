@@ -200,5 +200,5 @@ def dphot_filters(data, stddevs, filters_masks, comp_stars_mask = None):
         O[mask] = vO    ; sigO[mask] = sO
         S.append(vS)    ; sigS.append(sS)
         L[:, mask] = lc ; sigL[:, mask] = slc
-    return S, L, O, sigS, sigL, sigO
+    return np.ma.array(S), L, O, np.ma.array(sigS), sigL, sigO
 
