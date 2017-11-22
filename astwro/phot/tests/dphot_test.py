@@ -4,6 +4,9 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 from astwro.phot import *
+from os.path import join
+from astwro.phot.io import write_lc, write_lc_filters
+from astwro.utils import TmpDir
 
 
 def prepare_testset():
@@ -44,7 +47,25 @@ def test_masked():
     o, s, l, oe, se, le = dphot(d, e, c)
     pass
 
+
 def test_real():
     d, e, f = prepare_testset_real()
     o, s, l, oe, se, le = dphot_filters(d, e, f)
     pass
+
+
+def test_write_lc():
+    with TmpDir() as td:
+        d, e, f = prepare_testset_real()
+        hjd = np.linspace(989.34316, 1002.63264, d.shape[1])
+        write_lc(hjd, d, e, prefix=join(td.path, 'lc_'))
+
+def test_write_lc_filter():
+    d, e, f = prepare_testset_real()
+    hjd = np.linspace(989.34316, 1002.63264, d.shape[1])
+    fn = ['B', 'Han']
+    r = np.random.uniform(size=d.shape[1])
+    fm = np.array([r<0.5, r>=0.5], dtype=bool)
+    with TmpDir() as td:
+        write_lc_filters(fm, fn, hjd, d, e, prefix=join(td.path, 'lc_'))
+        pass
