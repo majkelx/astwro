@@ -1,3 +1,3 @@
 """Main Version of astwro package"""
-__version_info__ = (0, 5, 11)   ## Change also in ../docs/config.py
+__version_info__ = (0, 5, 12)   ## Change also in ../docs/config.py
 __version__ = '.'.join(map(str, __version_info__))
