@@ -60,6 +60,7 @@ class Runner(object):
         """
         self.logger = module_logger.getChild(type(self).__name__)
         self.executable = None
+        self.arguments = []
         self.batch_mode = batch
         self.__stream_keeper = None
 
@@ -96,6 +97,7 @@ class Runner(object):
         # new.stderr = self.stderr
         # new.returncode = self.returncode
         new.batch_mode = self.batch_mode
+        new.arguments = self.arguments
         # new.__process = None
         # new.__commands = self.__commands
         # new.ext_output_files = set()
@@ -304,7 +306,7 @@ class Runner(object):
         """
         self._pre_run(wait)
         try:
-            self.__process = sp.Popen([self.executable],
+            self.__process = sp.Popen([self.executable] + self.arguments,
                                       stdin=sp.PIPE,
                                       stdout=sp.PIPE,
                                       stderr=sp.PIPE,

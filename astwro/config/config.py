@@ -47,7 +47,7 @@ def get_config():
 
 
 def parse_config(files=None, parse_default_locations=True):
-    """Parses pydaophot config from files and sets config singleton
+    """Parses astwro config from files and sets config singleton
 
     :rtype:ConfigParser
     """

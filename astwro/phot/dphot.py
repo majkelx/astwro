@@ -7,8 +7,9 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
+from functools import partial
 import numpy as np
+from astropy.stats import SigmaClip
 
 
 def dphot(data, stddevs, comp_stars_mask = None):
@@ -201,4 +202,31 @@ def dphot_filters(data, stddevs, filters_masks, comp_stars_mask = None):
         S.append(vS)    ; sigS.append(sS)
         L[:, mask] = lc ; sigL[:, mask] = slc
     return np.ma.array(S), L, O, np.ma.array(sigS), sigL, sigO
+
+
+def mean_phot(lc, lc_stddev, lc_clip_sigma = 1.0, stdev_clip_sigma = 1.7, lc_clip_iters=2, stdev_clip_iter=2):
+    """ Calculates stars mean magnitude and error from light curves
+
+     Calculates stars mean magnitude with standard deviation from light curves using:
+     - weights from data points erros $w=e^{-2}$
+     - one-side sigma clipping on errors
+     - sigma clipping on data points
+    :param lc:            NxK array of N  star magnitudes in K observations
+    :param lc_stddev:     NxK array of  lc stddevs
+    """
+    p = np.ma.array(lc, copy=True)
+    pe = np.ma.array(lc_stddev, copy=True)
+
+    lc_clip = SigmaClip(sigma=lc_clip_sigma, iters=lc_clip_iters)#, cenfunc=partial(np.ma.average, weights=pe**-1))
+    err_clip = SigmaClip(sigma_lower=10.0, sigma_upper=stdev_clip_sigma, iters=stdev_clip_iter)
+    pmask1 = err_clip(pe, axis=1, copy=False).mask
+    pmask2 = pmask1 | lc_clip(p, axis=1, copy=False).mask
+    #    print(f, p.mask.sum(), pmask1.sum(), pmask2.sum())
+    #    mean, median, stddev = sigma_clipped_stats(lc[:,m], mask=mask1, axis=1, sigma=2.0)
+    p.mask = pe.mask = p.mask | pmask2
+    pw = pe ** -2
+    mean = np.ma.average(p, axis=1, weights=pw)
+    resid = lc - mean[:, np.newaxis]
+    stddev = np.ma.sqrt(np.ma.average(resid ** 2, axis=1))  # , weights=pw)
+    return  mean, stddev
 
