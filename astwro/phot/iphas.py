@@ -3,16 +3,23 @@ from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
+
 class Simulated_ri_rHa_Colors(object):
-    '''
+    """
     Simulated patches on (r' - i') -> (r' - Ha') diagram
+
     For different reddening and spectral types. Implemented after
     G. Barentsen et al. *T Tauri candidates in IC 1396 using IPHAS*
     [2011  MNRAS 415, 103–132]
-    '''
+
+    Parameters
+    ----------
+    reddening : float
+        E(B-V)
+    """
     _table = None
 
-    def __init__(self, reddening = 0.0):
+    def __init__(self, reddening=0.0):
         super(Simulated_ri_rHa_Colors, self).__init__()
         self._reddening = reddening
         self._r_i = None
@@ -48,15 +55,12 @@ class Simulated_ri_rHa_Colors(object):
 
 
 
-
-
-
     @classmethod
     def _get_table(cls):
         if cls._table is None:
             import os
             import pickle
-            pickelfile = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'iphas_sim_colors.pkl')
+            pickelfile = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'iphas_simulated_paths.pkl')
             with open(pickelfile, 'rb') as f:
                 cls._table = pickle.load(f)
         return cls._table
