@@ -55,6 +55,7 @@ def test_real():
 
 
 def test_write_lc():
+    #TODO: Limit numer of stars in some_stars_data.pkl
     with TmpDir() as td:
         d, e, f = prepare_testset_real()
         hjd = np.linspace(989.34316, 1002.63264, d.shape[1])

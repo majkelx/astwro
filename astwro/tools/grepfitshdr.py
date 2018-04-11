@@ -30,31 +30,57 @@ def printmatch(output, filename, line, withfile, fileonly):
             print (filename + ': ', end='', file=output)
         print (line, file=output)
 
+def iter_fields(hdr, onlyvalues=False, fields=None):
+    """ splits header into lines
+        if onlyvalues does not return field names
+        if fields returns only specified fields (forces onlyvalues)"""
+    if fields:
+        for key in hdr:
+            if key in fields:
+                yield hdr[key]
+    elif onlyvalues:
+        for val in hdr.values():
+            if val:
+                yield str(val)
+    else:
+        for line in repr(hdr).strip().splitlines():
+            yield line
 
-def grep(pattern, filenames, output=stdout, invert=False, withfile=False, fileonly=False):
+
+
+def grep(pattern, filenames, output=stdout, invert=False, withfile=False, fileonly=False,
+         fields=None, onlyvalues=False, ignorecase=True):
+    if fields is not None and fields[0] == '*':
+        fields = None
+        onlyvalues = True
+
     if isinstance(filenames, str):
         filenames = [filenames]
-    regexp = re.compile(pattern, flags=re.IGNORECASE)
+    regexp = re.compile(pattern, flags=re.IGNORECASE if ignorecase else  0)
     globmatched = 0
     for h, f in headers(filenames):
-        matched = 0
-        rep = repr(h).strip()
-        for line in rep.splitlines():
+        matched = scanned = 0
+        # rep = repr(h).strip()
+        # for line in rep.splitlines():
+        for line in iter_fields(h, onlyvalues=onlyvalues, fields=fields):
             match = regexp.search(line)
             if invert:
                 match = not match
+            scanned += 1
             if match:
                 matched += 1
                 printmatch(output, f, line, withfile, fileonly)
-                if fileonly:
+                if fileonly and not invert:
                     break
         globmatched += matched
         if fileonly:
-            print (f, file=output)
+            if (not invert and matched > 0) or (invert and matched == scanned):
+                print (f, file=output)
     return globmatched
 
 def __do(arg):
-    return  grep(arg.pattern, arg.file, invert=arg.v, withfile=arg.H, fileonly=arg.l)
+    return  grep(arg.pattern, arg.file, invert=arg.v, withfile=arg.H,
+                 fileonly=arg.l, fields=arg.f, ignorecase=arg.i)
 
 
 def __arg_parser():
@@ -65,17 +91,24 @@ def __arg_parser():
         epilog='exit code:\n'
                '  0 if any header matched pattern\n'
                '  1 if no match found\n\n' + commons.version_string(),
-        description='grep-like utility for fits (main) headers')
+        description='grep-like utility for fits (main) headers\n '
+                    'until -f specified, searches in keys, values and comments')
     parser.add_argument('pattern', type=str,
                         help='reg-exp, use single dot . to dump all header fields')
     parser.add_argument('file', type=str, nargs='+',
                         help='FITS file(s), catalog file containing file names prefixed by @ can be provided')
+    parser.add_argument('-i', action='store_true',
+                        help='ignore case')
     parser.add_argument('-v', action='store_true',
-                        help='Invert match')
+                        help='invert match')
     parser.add_argument('-H', action='store_true',
-                        help='Add filename to each found line')
+                        help='add filename to each found line')
     parser.add_argument('-l', action='store_true',
-                        help='Print filenames with matches only')
+                        help='print filenames with matches only')
+    parser.add_argument('-f', action='append', metavar='FIELD',
+                        help='matches only specified FIELD\'s value; can be provided multiple '
+                             'times to match several fields; -f* limits search to values but searches'
+                             'in all fields')
     return parser
 
 
