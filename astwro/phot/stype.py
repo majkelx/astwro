@@ -123,7 +123,7 @@ class SpectralType(object):
         ret.ticks = ([self.get_color_value(color, 'B') - 0.1]
                       + list((self.get_color_values(color, 'BAFGK') + self.get_color_values(color, 'AFGKM')) / 2)
                       + [self.get_color_value(color, 'M') + 0.2])
-        ret.labels = ['O'] + self.stypes.keys()
+        ret.labels = ['O'] + list(self.stypes.keys())
         return ret
 
     def plot_twiny_spectral_types(self, ax, color, facecolor='gray', alpha=0.2):

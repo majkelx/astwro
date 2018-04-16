@@ -29,7 +29,10 @@ import pickle
 import time
 from datetime import timedelta
 from copy import deepcopy
-from itertools import izip_longest
+try:
+    from itertools import izip_longest as zip_longest
+except ImportError:
+    from itertools import zip_longest
 
 import numpy
 from bitarray import bitarray
@@ -125,10 +128,10 @@ def eval_population_fine_psf(population, candidates, workers, show_progress):
         progress = utils.progressbar(total=len(population), step=len(workers))
         progress.print_progress(0)
     fitnesses = []
-    f_max = None
+    f_max = 0
     # https://docs.python.org/3/library/itertools.html#itertools-recipes grouper()
     # grouping population into chunks of size `parallel`
-    for chunk in izip_longest(*([iter(population)] * len(workers))):
+    for chunk in zip_longest(*([iter(population)] * len(workers))):
         active = [g is not None for g in chunk]  # all active, on errors some could be deactivated
         # PSF
         for individual, worker in zip(chunk, workers):
@@ -195,13 +198,13 @@ def eval_population_fine_psf(population, candidates, workers, show_progress):
                 all_s = worker['allstar'].ALlstars_result.als_stars
                 f = fitness_for_als(all_s)
                 fitnesses.append(f)  # fitness is tuple (val,)
-                f_max = max(f_max, f)
+                f_max = max(f_max, f[0])
             else:
                 fitnesses.append(None)
         # cut fitnesses if longer than population
         # (finesses mod parallel == 0, some None at the end can appear if population mod parallel != 0)
         fitnesses = fitnesses[:len(population)]
-        # fill gaps in fitnesses by maximum of rest of population
+        # fill gaps in fitnesses with maximum of rest of population
         for i, f in enumerate(fitnesses):
             if f is None:
                 fitnesses[i] = f_max
@@ -225,7 +228,7 @@ def eval_population_simple(population, candidates, workers, show_progress):
     f_max = None
     # https://docs.python.org/3/library/itertools.html#itertools-recipes grouper()
     # grouping population into chunks of size `parallel`
-    for chunk in izip_longest(*([iter(population)] * len(workers))):
+    for chunk in zip_longest(*([iter(population)] * len(workers))):
         active = [g is not None for g in chunk]  # all active, on errors some could be deactivated
         # PSF
         for individual, worker in zip(chunk, workers):
@@ -529,7 +532,7 @@ def __do(arg):
 
     logging.info('Successful evolution finished at {} (elapsed time: {:s})'.format(
         time.strftime(_time_format, time.localtime()),
-        timedelta(seconds=time.time() - start_time)
+        str(timedelta(seconds=time.time() - start_time))
     ))
 
     best_ind = tools.selBest(pop, 1)[0]

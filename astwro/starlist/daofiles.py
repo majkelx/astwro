@@ -16,7 +16,7 @@ class DAO(object):
             self.optional = optional
 
     UNKNOWN_FILE = FType(
-        columns   = ['id'] + range(1, 100),  # id then unknown columns
+        columns   = ['id'] + list(range(1, 100)),  # id then unknown columns
         extension = '.stars',
         NL = 1,
         read_cols=None,
@@ -125,13 +125,15 @@ class DAO(object):
         ('.ap', 'id'):  CType('id', '\n{:7.0f}', [0]),         # new linie in AP files
         ('.ap', 'sky'): CType('sky', '\n{:14.3f}', [-9.999]),  # new linie in AP files
     }
-    # add A2, A3,... and A2_err, A3_err,...
-    _apert_columns = dict([(col, CType(col, '{:9.3f}', [99.999,-99.999,94.999], optional=True))
-                           for col in ('A{:X}'.format(i) for i in range(2,13))])
-    _ap_err_columns = dict([(col, CType(col, '{:8.4f}', [9.9999], optional=True))
-                            for col in ('A{:X}_err'.format(i) for i in range(2,13))])
-    # dict union
-    columns = dict(chain.from_iterable(d.items() for d in (_static_columns, _apert_columns, _ap_err_columns)))
+
+# add A2, A3,... and A2_err, A3_err,...
+DAO._apert_columns = dict([(col, DAO.CType(col, '{:9.3f}', [99.999,-99.999,94.999], optional=True))
+                       for col in ('A{:X}'.format(i) for i in range(2,13))])
+DAO._ap_err_columns = dict([(col, DAO.CType(col, '{:8.4f}', [9.9999], optional=True))
+                        for col in ('A{:X}_err'.format(i) for i in range(2,13))])
+# dict union
+DAO.columns = dict(chain.from_iterable(d.items() for d in (DAO._static_columns, DAO._apert_columns, DAO._ap_err_columns)))
+
 
 
 DAO_file_firstline = ' NL    NX    NY  LOWBAD HIGHBAD  THRESH     AP1  PH/ADU  RNOISE    FRAD'

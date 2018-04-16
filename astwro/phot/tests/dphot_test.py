@@ -7,6 +7,7 @@ from astwro.phot import *
 from os.path import join
 from astwro.phot.io import write_lc, write_lc_filters
 from astwro.utils import TmpDir
+import sys
 
 
 def prepare_testset():
@@ -39,7 +40,10 @@ def prepare_testset_real():
     import pickle
     pickelfile = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'some_stars_data.pkl')
     with open(pickelfile, 'rb') as f:
-        d, e, c = pickle.load(f)
+        if sys.version_info >= (3, 0):
+            d, e, c = pickle.load(f, encoding='bytes')
+        else:
+            d, e, c = pickle.load(f)
     return d, e, c
 
 def test_masked():

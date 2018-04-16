@@ -253,7 +253,10 @@ class Runner(object):
         if signature is None:
             signature = filepath
 
-        return prefix + str(hashlib.md5(str(signature)).hexdigest())[:6] + '_' + os.path.basename(filepath) + suffix
+        return prefix \
+               + str(hashlib.md5(str(signature).encode()).hexdigest())[:6] \
+               + '_' \
+               + os.path.basename(filepath) + suffix
 
     def _prepare_output_file(self, data):
         # type: (str) -> (str, str)
