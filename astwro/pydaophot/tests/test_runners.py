@@ -21,6 +21,13 @@ class TestRunners(unittest.TestCase):
         self.assertGreater(x, 0)
         self.assertGreater(y, 0)
 
+    def test_image_substitution_and_find(self):
+        d = Daophot()
+        d.image = self.image
+        r = d.FInd()
+        print(d.output)
+        self.assertGreater(r.stars, 1)
+
     #@unittest.skip('long run, un-skip to test allstar')
     def test_execution_allstar_pipeline(self):
         d = Daophot(batch=True)
@@ -43,6 +50,15 @@ class TestRunners(unittest.TestCase):
         d.run()
         self.assertGreater(d.PSf_result.chi, 0)
 
+    def test_sky_and_find(self):
+        d = Daophot(image=self.image)
+        s = d.SKy()
+        f = d.FInd()
+        self.assertAlmostEqual(f.sky, s.sky)
+        self.assertAlmostEqual(f.skydev, s.skydev)
+        self.assertAlmostEqual(f.mean, s.mean)
+        self.assertAlmostEqual(f.median, s.median)
+        self.assertAlmostEqual(f.pixels, s.pixels)
 
 
 suite = unittest.TestLoader().loadTestsFromTestCase(TestRunners)

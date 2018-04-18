@@ -13,8 +13,8 @@ def bunch_kwargs(parser, positional=[], **kwargs):
 
 
 def version_string():
-    import _version
-    return 'AstWro tools v. {} [github.com/majkelx/astwro]'.format(_version.__version__)
+    from ._version import __version__
+    return 'AstWro tools v. {} [github.com/majkelx/astwro]'.format(__version__)
 
 
 def main_info():

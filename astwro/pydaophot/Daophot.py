@@ -22,6 +22,7 @@ class Daophot(DAORunner):
     :var str daophotopt:   daophotopt.opt file to be copied
     :var DPOP_OPtion      OPtion_result:     results of command OPtion  or initial options reported by `daophot`
     :var DPOP_ATtach      ATtach_result:     results of command ATtach
+    :var DpOp_SKy         SKy_result:        results of command SKy
     :var DpOp_FInd        FInd_result:       results of command FInd
     :var DpOp_PHotometry  PHotometry_result: results of command PHotometry
     :var DpOp_PIck        PIck_result:       results of command PIck
@@ -82,6 +83,7 @@ class Daophot(DAORunner):
 
         self.OPtion_result = None  #: Results of command OPtion  or initial options reported by `daophot`
         self.ATtach_result = None
+        self.SKy_result = None
         self.FInd_result = None
         self.PHotometry_result = None
         self.PIck_result = None
@@ -107,7 +109,7 @@ class Daophot(DAORunner):
         if self.options:
             self._enqueueOPtions(self.options, on_beginning=True)
         if self.image:
-            self._equeueATtach(self.image, on_beginning=True)
+            self._equeueATtach(self.expand_path(self.image), on_beginning=True)
 
         # just for consume options daophot presents on the beginning
         opt_processor = DPOP_OPtion()
@@ -257,10 +259,25 @@ class Daophot(DAORunner):
         self._get_ready_for_commands()  # wait for completion before changes in working dir
         return self._enqueueOPtions(options, value)
 
+    def SKy(self):
+        """
+        Runs (or adds to execution queue in batch mode) daophot SKY command.
+
+        :return: results object also accessible as :attr:`Daophot.SKy_result` property
+        :rtype: DpOp_SKy
+        """
+        self._get_ready_for_commands()  # wait for completion before changes in working dir
+        commands = 'SKY\n'
+        processor = DpOp_SKy()
+        self._insert_processing_step(commands, output_processor=processor)
+        self.SKy_result = processor
+        if not self.batch_mode:
+            self.run()
+        return processor
 
     def FInd(self, frames_av = 1, frames_sum = 1, starlist_file='i.coo'):
         """
-        Runs (or adds to execution queue in batch mode) daophot ATTACH command.
+        Runs (or adds to execution queue in batch mode) daophot FIND command.
         
         :param int frames_av: averaged frames in image, default: 1
         :param int frames_sum: summed frames in image, default: 1

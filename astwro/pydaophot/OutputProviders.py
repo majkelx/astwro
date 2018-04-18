@@ -117,14 +117,25 @@ r_command = re.compile(r'Command:')
 r_pic_size = re.compile(r'(?<=Picture size:\s\s\s)([0-9]+)\s+([0-9]+)')
 #     for options listing like FWHM OF OBJECT =     5.00   THRESHOLD (in sigmas) =     3.50
 r_opt = re.compile(r'\b(\w\w)[^=\n]*=\s*(\-?[0-9]+\.[0-9]*)')
-#     for FInd:
-r_find = re.compile(
+#     for SKy:
+t_sky = (
     r'Sky mode and standard deviation = +(-?\d+\.\d*) +(-?\d+\.\d*)\n+ +'
     r'Clipped mean and median = +(-?\d+\.\d*)\s+(-?\d+\.\d*)\n +'
-    r'Number of pixels used \(after clip\) = (\d*),?(\d+)\n +'
-    r'Relative error = +(-?\d+\.\d*)(?:\n.*)+\s'
+    r'Number of pixels used \(after clip\) = (\d*),?(\d+)')
+r_sky = re.compile(t_sky)
+#     for FInd:
+t_find = t_sky + (
+    r'\n +Relative error = +(-?\d+\.\d*)(?:\n.*)+\s'
     r'(\d+) stars'
 )
+r_find = re.compile(t_find)
+# r_find = re.compile(
+#     r'Sky mode and standard deviation = +(-?\d+\.\d*) +(-?\d+\.\d*)\n+ +'
+#     r'Clipped mean and median = +(-?\d+\.\d*)\s+(-?\d+\.\d*)\n +'
+#     r'Number of pixels used \(after clip\) = (\d*),?(\d+)\n +'
+#     r'Relative error = +(-?\d+\.\d*)(?:\n.*)+\s'
+#     r'(\d+) stars'
+# )
 #    for PHotometry
 r_phot = re.compile(r'Estimated magnitude limit \(Aperture 1\): +(-?\d+\.\d*) +\+- +(-?\d+\.\d*) +per star')
 #    for PIck
@@ -189,31 +200,25 @@ class DPOP_OPtion(DaophotCommandOutputProcessor):
     def raise_if_error(self):
         _ = self.options
 
-class DpOp_FInd(DaophotCommandOutputProcessor):
-    """Results of `FIND` daophot command"""
-    def __init__(self, prev_in_chain=None, starlist_file=None):
+
+class DpOp_SKy(DaophotCommandOutputProcessor):
+    """Results of `SKY` daophot command"""
+
+    def __init__(self, prev_in_chain=None):
+        self.regexp = r_sky
         self.__data = None
-        self.__starlist = None
-        self.starlist_file = starlist_file  #: Patch to output file with found stars
-        super(DpOp_FInd, self).__init__(prev_in_chain=prev_in_chain)
+        super(DpOp_SKy, self).__init__(prev_in_chain=prev_in_chain)
 
     @property
     def data(self):
         if self.__data is None:
             buf = self.get_buffer()
-            match = r_find.search(buf)
+            match = self.regexp.search(buf)
             if match is None:
-                raise Exception('daophot find output doesnt match regexp r_find:'
+                raise Exception('daophot SKY or FIND output doesnt match regexp for that command:'
                                 ' error (or regexp is wrong). Output buffer:\n ' + buf)
             self.__data = match.groups()
         return self.__data
-
-    @property
-    def found_starlist(self):
-        """StarList with found stars"""
-        if self.__starlist is None and self.starlist_file:
-            self.__starlist = read_dao_file(self.starlist_file)
-        return self.__starlist
 
     @property
     def sky(self):
@@ -245,15 +250,32 @@ class DpOp_FInd(DaophotCommandOutputProcessor):
             t = int(t) * 1000
         return int(self.data[5]) + t
 
+
+
+class DpOp_FInd(DpOp_SKy):
+    """Results of `FIND` daophot command (extends SKY)"""
+    def __init__(self, prev_in_chain=None, starlist_file=None):
+        self.__starlist = None
+        self.starlist_file = starlist_file  #: Patch to output file with found stars
+        super(DpOp_FInd, self).__init__(prev_in_chain=prev_in_chain)
+        self.regexp = r_find
+
+    @property
+    def found_starlist(self):
+        """StarList with found stars"""
+        if self.__starlist is None and self.starlist_file:
+            self.__starlist = read_dao_file(self.starlist_file)
+        return self.__starlist
+
     @property
     def err(self):
         """Error estimation"""
-        return self.data[6]
+        return float(self.data[6])
 
     @property
     def stars(self):
         """Number of found stars"""
-        return self.data[7]
+        return int(self.data[7])
 
 class DpOp_PHotometry(DaophotCommandOutputProcessor):
     """Results of `PHOTOMETRY` daophot command"""

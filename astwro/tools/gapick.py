@@ -545,12 +545,15 @@ def __do(arg):
 def __arg_parser():
     import argparse
     parser = argparse.ArgumentParser(
-        description='Find best PSF stars using GA to minimize mean error 2nd version'
-                    ' of PSF fit applied to all stars by allstar. Minimized function'
-                    ' is the mean of allstar\'s chi value calculated on sigma-clipped '
-                    ' (sigma=4.0) list of all stars. Results'
-                    ' will be stored in --dir directory if provided. List of stars'
-                    ' will be output to stdout until suppressed by -no_stdout')
+        description='Find best PSF stars using genetic algorithm running the daophot/allstar'
+                    ' workflow for number of a PSF stars sets.'
+                    ' Minimized function'
+                    ' is the mean of allstar\'s chi statistic calculated on '
+                    ' list of all stars. Results'
+                    ' are stored in --dir directory if provided. List of star ids'
+                    ' of the best set found, is printed to stdout (until suppressed by -no_stdout)',
+        epilog=commons.version_string(),
+    )
     parser.add_argument('image', default=None, nargs='?',
                         help='FITS image file (default: astwro sample image for tests)')
     parser.add_argument('--all-stars-file', '-c', metavar='FILE', default=None,

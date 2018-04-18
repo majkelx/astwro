@@ -70,6 +70,7 @@ class Runner(object):
     def _reset(self):
         """Resets runner without cleaning/changing runner dir
            allows execution of new sequence in same dir and files"""
+        self.input = None
         self.output = None
         self.stderr = None
         self.returncode = None
@@ -373,6 +374,7 @@ class Runner(object):
 
     def __communicate(self, inpt=None, timeout=None):
         i = inpt.encode(encoding='ascii') if inpt else None
+        self.input = i
         o, e = self.__process.communicate(i, timeout=timeout) if timeout else self.__process.communicate(i)
         self.output = o.decode('ascii')
         self.stderr = e.decode('ascii')
