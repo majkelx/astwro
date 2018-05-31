@@ -10,7 +10,7 @@ from astwro.utils import tmpdir
 
 def check_starlist_daotype(s, daotype):
     assert s.DAO_type == daotype
-    assert s.count() > 5
+    assert s.stars_number() > 5
     assert s.columns[0] == 'id'
     assert (s.index == s.id).all()
 

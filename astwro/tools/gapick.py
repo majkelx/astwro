@@ -105,7 +105,8 @@ def calc_spectrum(pop):
 def fitness_for_als(als):
     # type: (sl.StarList) -> (float,)
     #Calucalates fitness from allstar result
-    return sigmaclip(als.chi)[0].mean(),  # fitness is tuple (val,)
+    clipped = sigmaclip(als.chi)[0]
+    return numpy.sqrt( (clipped*clipped).sum() ) ,  # fitness is tuple (val,)
 
 
 def eval_population(population, candidates, workers, show_progress, fine_tune):
@@ -128,7 +129,7 @@ def eval_population_fine_psf(population, candidates, workers, show_progress):
         progress = utils.progressbar(total=len(population), step=len(workers))
         progress.print_progress(0)
     fitnesses = []
-    f_max = 0
+    f_max = None
     # https://docs.python.org/3/library/itertools.html#itertools-recipes grouper()
     # grouping population into chunks of size `parallel`
     for chunk in zip_longest(*([iter(population)] * len(workers))):
@@ -198,7 +199,8 @@ def eval_population_fine_psf(population, candidates, workers, show_progress):
                 all_s = worker['allstar'].ALlstars_result.als_stars
                 f = fitness_for_als(all_s)
                 fitnesses.append(f)  # fitness is tuple (val,)
-                f_max = max(f_max, f[0])
+                f_max = f if f_max is None or f_max[0] < f[0] else f_max
+#                f_max = f[0] if f_max is None else max(f_max, f[0])
             else:
                 fitnesses.append(None)
         # cut fitnesses if longer than population
@@ -251,7 +253,8 @@ def eval_population_simple(population, candidates, workers, show_progress):
                 all_s = worker['allstar'].ALlstars_result.als_stars
                 f = fitness_for_als(all_s)
                 fitnesses.append(f)  # fitness is tuple (val,)
-                f_max = max(f_max, f)
+                f_max = f if f_max is None or f_max[0] < f[0] else f_max
+#                f_max = max(f_max, f)
             else:
                 fitnesses.append(None)
         # cut fitnesses if longer than population
@@ -325,9 +328,10 @@ def __do(arg):
     arg.all_stars_file = dao.Daophot.expand_path(arg.all_stars_file)
     arg.psf_stars_file = dao.Daophot.expand_path(arg.psf_stars_file)
     arg.photo_opt = dao.Daophot.expand_path(arg.photo_opt)
+    arg.daophot_opt = dao.Daophot.expand_path(arg.daophot_opt)
 
     # get single daophot and ATtach file
-    dp = dao.Daophot(image=arg.image)
+    dp = dao.Daophot(image=arg.image, daophotopt=arg.daophot_opt)
 
     # all stars file
     if not arg.all_stars_file:
@@ -374,7 +378,7 @@ def __do(arg):
 
     # candidates (filter out big psf errors)
     candidates = dp.read_starlist(arg.psf_stars_file, add_psf_errors=True)
-    org_cand_no = candidates.count()
+    org_cand_no = candidates.stars_number()
     err = dp.PSf_result.errors
     averr = err.psf_err.mean()
     err = err[(err.psf_err < arg.max_psf_err_mult*averr) & (err.flag == ' ')]  # filter out big errors and * or ? marked stars
@@ -384,14 +388,14 @@ def __do(arg):
     logging.info(
         "{} good candidates ({} rejected: * or ? or psf error exceeded max-psf-err-mult*averge-error = {}*{} = {})"
         .format(
-        candidates.count(),
-        org_cand_no - candidates.count(),
+        candidates.stars_number(),
+        org_cand_no - candidates.stars_number(),
         arg.max_psf_err_mult,
         averr,
         arg.max_psf_err_mult * averr)
     )
 
-    if candidates.count() < 15:
+    if candidates.stars_number() < 15:
         logging.error("Number of candidates lass than 15. GA needs more. Sorry")
 
     # Prepare output directory for results
@@ -408,7 +412,7 @@ def __do(arg):
 
     toolbox = base.Toolbox()
     # Structure initializes
-    toolbox.register("individual", random_genome, creator.Individual, candidates.count(), arg.ga_init_prob)
+    toolbox.register("individual", random_genome, creator.Individual, candidates.stars_number(), arg.ga_init_prob)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register('clone', clone_individual)
 
@@ -530,6 +534,11 @@ def __do(arg):
                 pickle.dump(checkpoint, f)
         # end of evolution loop
 
+    if result_dir:
+        lst_file.close()
+        reg_file.close()
+        gen_file.close()
+
     logging.info('Successful evolution finished at {} (elapsed time: {:s})'.format(
         time.strftime(_time_format, time.localtime()),
         str(timedelta(seconds=time.time() - start_time))
@@ -565,6 +574,8 @@ def __arg_parser():
                         help='frames ave - parameter of daophot FIND when --all-stars-file not provided  (default: 1)')
     parser.add_argument('--frames-sum', metavar='n', type=int, default=1,
                         help='frames summed - parameter of daophot FIND when --all-stars-file not provided (default: 1)')
+    parser.add_argument('--daophot-opt', '-D', metavar='FILE', default=None,
+                        help='daophot.opt file for daophot (default: internal)')
     parser.add_argument('--photo-opt', '-O', metavar='FILE', default=None,
                         help='photo.opt file for aperture photometry (default: none)')
     parser.add_argument('--photo-is', metavar='r', type=int, default=0,

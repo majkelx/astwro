@@ -4,8 +4,16 @@ from .daofiles import parse_dao_hdr, write_dao_header, DAO_file_firstline, DAO
 import pandas as pd
 import re
 
-_ds9_regexp = re.compile(r'[+-]? *circle[( ] *([+-]?\d+[.]?\d*) *[, ] *([+-]?\d+[.]?\d*).+#.*id *= *(\d+)')
-_ds9_no_id_regexp = re.compile(r'[+-]? *circle[( ] *([+-]?\d+[.]?\d*) *[, ] *([+-]?\d+[.]?\d*)')
+_ds9_regexp = re.compile(
+    r'[+-]? *circle[( ] *([+-]?\d+[.]?\d*) *[, ] *([+-]?\d+[.]?\d*).+#.*id *= *(\d+)')
+_ds9_wcs_regexp = re.compile(
+    r'[+-]? *circle[( ] *([+-]?\d+:\d+:\d+[.]?\d*) *[, ] *([+-]?\d+:\d+:\d+[.]?\d*).+#.*id *= *(\d+)')
+_ds9_no_id_regexp = re.compile(
+    r'[+-]? *circle[( ] *([+-]?\d+[.]?\d*) *[, ] *([+-]?\d+[.]?\d*)')
+_ds9_no_id_wcs_regexp = re.compile(
+    r'[+-]? *circle[( ] *([+-]?\d+:\d+:\d+[.]?\d*) *[, ] *([+-]?\d+:\d+:\d+[.]?\d*)')
+_ds9_system_wcs = re.compile('fk4|fk5|J2000|B1950|ICRS', re.IGNORECASE)
+_ds9_system_xy = re.compile('PHYSICAL|IMAGE', re.IGNORECASE)
 
 
 def read_ds9_regions(file):
@@ -27,6 +35,8 @@ def read_ds9_regions(file):
     data_noid = []
     dao_hdr1 = None
     hdr = None
+    sys_wcs, sys_xy = (1,2)
+    system = None
     for line in f:
         if line[0] == '#':
             if line[1:11] == DAO_file_firstline[:10]:  # dao header found in comment
@@ -35,22 +45,41 @@ def read_ds9_regions(file):
             if dao_hdr1 is not None:  # second line of dao header
                 hdr = parse_dao_hdr(dao_hdr1, line, '#')
         else:
+            if system is None:
+                if _ds9_system_wcs.search(line):
+                    system = sys_wcs
+                elif _ds9_system_xy.search(line):
+                    system = sys_xy
+                pass
             m = _ds9_regexp.search(line)
             if m is not None:  # s[id] = (id, x, y)
                 data.append([int(m.group(3)), float(m.group(1)), float(m.group(2))])
             else:
-                m = _ds9_no_id_regexp.search(line)
-                if m is not None:
-                    data_noid.append([float(m.group(1)), float(m.group(2))])
+                m = _ds9_wcs_regexp.search(line)
+                if m is not None:  # s[id] = (id, ra, dec)
+                    data.append([int(m.group(3)), str(m.group(1)), str(m.group(2))])
+                else:
+                    m = _ds9_no_id_regexp.search(line)  # s[?] = (x, y)
+                    if m is not None:
+                        data_noid.append([float(m.group(1)), float(m.group(2))])
+                    else:
+                        m = _ds9_no_id_wcs_regexp.search(line)  # s[?] = (ra, dec)
+                        if m is not None:
+                            data_noid.append([str(m.group(1)), str(m.group(2))])
+
         dao_hdr1 = None
     close_files(to_close)
-    s = StarList(data, columns = ['id', 'x', 'y'])
+    if system == sys_wcs:
+        s = StarList(data, columns = ['id', 'ra', 'dec'])
+        s_noid = StarList(data_noid, columns=['ra', 'dec'])
+    else:
+        s = StarList(data, columns = ['id', 'x', 'y'])
+        s_noid = StarList(data_noid, columns = ['x', 'y'])
     s.index = s['id']
     s['auto_id'] = False
-    s_noid = StarList(data_noid, columns = ['x', 'y'])
     if not s_noid.empty:
         id_starts_from = 1 if s.empty else s.id.max() + 1
-        ids = range(id_starts_from, id_starts_from + s_noid.count())
+        ids = range(id_starts_from, id_starts_from + s_noid.stars_number())
         s_noid['id'] = ids
         s_noid.index = ids
         s_noid['auto_id'] = True
@@ -60,12 +89,12 @@ def read_ds9_regions(file):
             s = s.append(s_noid)
 
     s.DAO_hdr = hdr
-    s.DAO_type = DAO.XY_FILE
+    s.DAO_type = DAO.RADEC_FILE if system == sys_wcs else DAO.XY_FILE
     return s
 
 
 def write_ds9_regions(starlist, filename,
-                      color='green', width=1, size=8, font=None, label='{id:.0f}',
+                      color='green', width=1, size=None, font=None, label='{id:.0f}',
                       exclude=None, indexes=None, colors=None, sizes=None, labels=None,
                       color_column=None, size_column=None,
                       comment=None, add_global=None, WCS=False):
@@ -77,7 +106,7 @@ def write_ds9_regions(starlist, filename,
     :param str filename:      output filename or stream open for writing
     :param str color:         default color
     :param int width:         default line width
-    :param int size:          default radius
+    :param int size:          default radius (default 8px or 2")
     :param str font:          ds9 font specification e.g. "times 12 bold italic"
     :param str label:         format expression for label, use col names
     :param pd.Index exclude:  index of disabled regions, if None all are enabled
@@ -89,7 +118,9 @@ def write_ds9_regions(starlist, filename,
     :param str size_column:   column of starlist with size values
     :param str add_global:    content of additional 'global' if not None
     :param str comment:       content of additional comment line if not None
-    :param bool WCS:          If true, columns `ra` and `dec` will be used and coord. system set to fk5
+    :param bool or str WCS:   If true, columns `ra` and `dec` will be used and coord system set to ICRS
+                              If nonepmpty string, string will be used as system description
+                              If None, False or '', columns 'x','y' will be used and system set to IMAGE
     Example:
     write_ds9_regions(sl, 'i.reg', color='blue',
                         indexes=[saturated, psf],
@@ -121,17 +152,25 @@ def write_ds9_regions(starlist, filename,
     if font is not None:
         f.write('global font={}\n'.format(font))
     if add_global is not None:
-        f.write('global {}\n')
+        f.write('global {}\n'.format(add_global))
+    if not WCS:
+        f.write('image\n')
+    else:
+        system = WCS if isinstance(WCS, str) else 'icrs'
+        f.write(system+'\n')
     for i, row in starlist.iterrows():
         if exclude is not None and i in exclude:
             f.write('-')
-        s = size
+        if size is not None:
+            s = size
+        else:
+            s = '2"' if WCS else 8
         text = label.format(**row)
         c = ''
         if size_column is not None:
             s = row[size_column]
         if color_column is not None:
-            c = row[color_column]
+            c = ' color=' + row[color_column]
         if indexes is not None:
             for n in range(len(indexes)):
                 if i in indexes[n]:

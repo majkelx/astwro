@@ -28,7 +28,7 @@ def __arg_parser():
                         help='color in format accepted by ds9, default: green')
     parser.add_argument('-r', '--size', type=float, default=8.0,
                         help='radius of object circle, default: 8')
-    parser.add_argument('-w', '--width', type=float, default=1.0,
+    parser.add_argument('-w', '--width', type=int, default=1,
                         help='line width, default 1')
     parser.add_argument('-i', '--id-col', type=int, default=1,
                         help='number of column in star list containing object id, default: 1')

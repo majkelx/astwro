@@ -11,6 +11,7 @@ import re
 from os.path import isfile
 from sys import exit
 from sys import stdout
+from glob import glob
 
 import astwro.tools.__commons as commons
 
@@ -55,7 +56,7 @@ def grep(pattern, filenames, output=stdout, invert=False, withfile=False, fileon
         onlyvalues = True
 
     if isinstance(filenames, str):
-        filenames = [filenames]
+        filenames = glob(filenames)
     regexp = re.compile(pattern, flags=re.IGNORECASE if ignorecase else  0)
     globmatched = 0
     for h, f in headers(filenames):

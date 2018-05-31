@@ -28,9 +28,9 @@ runlog.propagate = False  # do not pass logrecord to stderr logger ater logging 
 def lstcorr(mult, err, psf, phase):
     averr = err.psf_err.mean()
     err = err[(err.psf_err < mult*averr) & (err.flag == ' ')]  # filter out big errors and * or ? marked stars
-    if err.count() != psf.count():
+    if err.stars_number() != psf.stars_number():
         log.warning('{} PSF stars discarded during {}, error threshold: {}'.format(
-            psf.count() - err.count(), phase, mult * averr))
+            psf.stars_number() - err.stars_number(), phase, mult * averr))
     return psf.loc[err.index]
 
 
@@ -71,7 +71,7 @@ def daophot_photometry(
 
     OBSERV = hdr.get('OBSERVAT')
     OBJECT = hdr.get('OBJECT')
-    READ_MODE = hdr.get('GAIN')
+    READ_MODE = 2 # hdr.get('GAIN')  # TODO: Where is READ_MODE now??!
 
 
     ## set vars here
@@ -131,10 +131,10 @@ def daophot_photometry(
     psf_ap = all_ap.loc[psf_idx.index]                         # pandas style select from all_ap which in psf_idx
     psf_ap = psf_ap[(psf_ap.mag > 1.0) & (psf_ap.mag_err < 0.1)] # minmag and maxerr filtering
 
-    if psf_ap.count() < NPSFC:
-        raise Exception('There are not enough stars for PSF estimation: {}'.format(psf_ap.count()))
+    if psf_ap.stars_number() < NPSFC:
+        raise Exception('There are not enough stars for PSF estimation: {}'.format(psf_ap.stars_number()))
 
-    if psf_ap.count() > NPSFV:
+    if psf_ap.stars_number() > NPSFV:
         sdaophot.link_to_runner_dir(path.join(INPUT, DAOOPT_VAR), 'daophot.opt')
     else:
         sdaophot.link_to_runner_dir(path.join(INPUT, DAOOPT_CONST), 'daophot.opt')
@@ -145,13 +145,13 @@ def daophot_photometry(
     # lstcorr -s ${ERRPSF1} i.err i.lst
     psf_ap = lstcorr(ERRPSF1, sdaophot.PSf_result.errors, psf_ap, 'preliminary estimation of PSF')
 
-    if psf_ap.count() < NPSFC:
-        raise Exception('There are not enough stars for PSF estimation: {}'.format(psf_ap.count()))
+    if psf_ap.stars_number() < NPSFC:
+        raise Exception('There are not enough stars for PSF estimation: {}'.format(psf_ap.stars_number()))
 
-    if psf_ap.count() > NPSFV:
-        log.info('Variable PSF model in use: ({})'.format(psf_ap.count()))
+    if psf_ap.stars_number() > NPSFV:
+        log.info('Variable PSF model in use: ({})'.format(psf_ap.stars_number()))
     else:
-        log.info('Constant PSF model in use: ({})'.format(psf_ap.count()))
+        log.info('Constant PSF model in use: ({})'.format(psf_ap.stars_number()))
         sdaophot.link_to_runner_dir(path.join(INPUT, DAOOPT_CONST), 'daophot.opt')
 
     # first calculation of PSF
@@ -214,7 +214,7 @@ def daophot_photometry(
     pphot = sallstar.ALlstars_result.als_stars.sort_values('mag')
     #rmsf 200 i.idx
     #if !(-e i.idx) then
-    if pphot.count() < 200:  ## what limit is equiv of rmsf 200 i.idx ?
+    if pphot.stars_number() < 200:  ## what limit is equiv of rmsf 200 i.idx ?
         runlog.error('PSF photometry file not created !')
         raise Exception('PSF photometry file not created!')
 

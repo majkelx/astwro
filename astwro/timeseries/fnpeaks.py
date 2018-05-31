@@ -10,9 +10,7 @@ from astropy.table import Table
 from astropy.modeling import models, fitting
 from astropy.stats import sigma_clipped_stats, sigma_clip
 
-
-from astwro.utils import TmpDir
-from astwro.pydaophot.Runner import Runner
+from astwro.exttools import Runner
 from astwro.phot.io import write_lc, write_lc_filters
 
 class LCFitter(object):

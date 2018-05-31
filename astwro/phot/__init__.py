@@ -8,4 +8,5 @@ dphot         : function calcualting differential photometry and light curves
 dphot_filters : convenience function calling dphot for multiple filters
  """
 from .dphot import *
+from .phot_error import err_poly_fit, PhotError
 

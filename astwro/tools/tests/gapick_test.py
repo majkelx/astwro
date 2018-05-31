@@ -15,9 +15,9 @@ def test_gapick_short():
         ga_pop = 15,  # small population
         overwrite = True,
         out_dir = d.path,
-        fine = True,
+        fine = False,
     )
-    assert (r.count() > 10)
+    assert (r.stars_number() > 10)
 
     ap = read_dao_file(path.join(d.path, 'i.ap'))
     lst = read_dao_file(path.join(d.path, 'gen_last.lst'))

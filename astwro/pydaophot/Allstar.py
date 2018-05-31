@@ -3,7 +3,7 @@ __metaclass__ = type
 # see https://wiki.python.org/moin/PortingToPy3k/BilingualQuickRef
 from .DAORunner import DAORunner
 from .OutputProviders import *
-from .daoconfig import find_opt_file
+from astwro.config import find_opt_file
 
 
 class Allstar(DAORunner):
@@ -41,7 +41,7 @@ class Allstar(DAORunner):
         if allstaropt is not None:
             self.allstaropt = allstaropt
         else:
-            self.allstaropt = find_opt_file('allstar.opt')
+            self.allstaropt = find_opt_file('allstar.opt', package='pydaophot')
 
         self.image = self.expand_path(image)
 
@@ -74,7 +74,7 @@ class Allstar(DAORunner):
 
     def _pre_run(self, wait):
         if not self.ALlstars_result:
-            raise Allstar.RunnerException('Add ALlstar command before run.')
+            raise Allstar.RunnerException('Add ALlstar command before run.', self)
         super(Allstar, self)._pre_run(wait)
         # set options, and prepare options parser
         commands = ''

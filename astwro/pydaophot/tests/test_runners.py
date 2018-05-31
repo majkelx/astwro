@@ -28,6 +28,12 @@ class TestRunners(unittest.TestCase):
         print(d.output)
         self.assertGreater(r.stars, 1)
 
+    def test_exception_in_PHotometry(self):
+        d = Daophot(image=self.image, batch=True)
+        d.FInd()
+        with self.assertRaises(d.RunnerException):
+            d.PHotometry(IS=0, OS=0, apertures=[8])
+
     #@unittest.skip('long run, un-skip to test allstar')
     def test_execution_allstar_pipeline(self):
         d = Daophot(batch=True)

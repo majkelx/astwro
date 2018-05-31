@@ -3,10 +3,9 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 import os
-import tempfile
 import random
 from collections import namedtuple
-from .Runner import Runner
+from astwro.exttools import Runner
 import astwro.starlist as sl
 
 #TODO: Add convinirnt sorting for starlist to avoid manually sorting/writing: dp.write_starlist(sorted_stars, 'i.ap')

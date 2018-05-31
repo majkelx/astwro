@@ -5,7 +5,7 @@ __metaclass__ = type
 import os
 from .DAORunner import DAORunner
 from .OutputProviders import *
-from .daoconfig import find_opt_file
+from astwro.config import find_opt_file
 import astwro.starlist as sl
 
 class Daophot(DAORunner):
@@ -42,6 +42,13 @@ class Daophot(DAORunner):
 
     """
 
+    PSF_GAUSSIAN = 1  # type: int
+    PSF_MOFFAT15 = 2  # type: int
+    PSF_MOFFAT25 = 3  # type: int
+    PSF_MOFFAT35 = 4  # type: int
+    PSF_LORENTZ = 5   # type: int
+    PSF_PENNY1 = 6    # type: int
+    PSF_PENNY2 = 7    # type: int
 
     def __init__(self, dir=None, image=None, daophotopt=None, options=None, batch=False):
         # type: ([str,object], [str], [str], [list,dict], bool) -> Daophot
@@ -64,10 +71,10 @@ class Daophot(DAORunner):
             Runner's directory, object of :class:`astwro.utils.TmpDir`, call ``Daophot.dir.path`` for string path to directory
 
         """
-        if daophotopt is not None:
+        if daophotopt:
             self.daophotopt = daophotopt
         else:
-            self.daophotopt = find_opt_file('daophot.opt')
+            self.daophotopt = find_opt_file('daophot.opt', package='pydaophot')
 
         self.image = self.expand_path(image)
         self.options = {'WA': -2}
@@ -195,7 +202,7 @@ class Daophot(DAORunner):
         :rtype: DPOP_ATtach
         """
         if not self.batch_mode:
-            raise Daophot.RunnerException('ATtach is intented for "batch" mode only. Use image property.')
+            raise Daophot.RunnerException('ATtach is intented for "batch" mode only. Use image property.', self)
 
         self._get_ready_for_commands()  # wait for completion before changes in working dir
 
@@ -254,7 +261,7 @@ class Daophot(DAORunner):
         :rtype: DPOP_OPtion  
         """
         if not self.batch_mode:
-            raise Daophot.RunnerException('OPtions is intented for "batch" mode only. Use set_options().')
+            raise Daophot.RunnerException('OPtions is intented for "batch" mode only. Use set_options().', self)
 
         self._get_ready_for_commands()  # wait for completion before changes in working dir
         return self._enqueueOPtions(options, value)
@@ -301,6 +308,7 @@ class Daophot(DAORunner):
         Runs (or adds to execution queue in batch mode) daophot PHOTOMETRY command. 
         
         Either :py:attr:`photoopt` or :attr:`IS`, :attr:`OS` and :attr:`apertures` have to be set.
+        eg.: ``IS=35, OS=50, apertures=[8]``
 
         :param str photoopt: photo.opt file to be used, default: None (provide :attr:`IS`, :attr:`OS` and :attr:`apertures`)
         :param float IS: inner sky radius, overwrites :attr:`photoopt` file value IS
@@ -323,11 +331,12 @@ class Daophot(DAORunner):
         #                     Star ID file (default mik.lst): mik.coo
         #                       Output file (default mik.ap): mik2.ap
         if photoopt is None and (apertures is None or IS==0 or OS==0):
-            raise Daophot.RunnerValueError('Apertures and IS and OS must be provided, explicitly or as photoopt file')
+            raise Daophot.RunnerValueError('Apertures and IS and OS must be provided, explicitly or as photoopt file',
+                                           self)
         if apertures is None:
             apertures = []
         elif len(apertures) > 12:
-            raise Daophot.RunnerValueError('apertures apertures list can contain maximum 12 elements')
+            raise Daophot.RunnerValueError('apertures apertures list can contain maximum 12 elements', self)
         self._get_ready_for_commands()  # wait for completion before changes in working dir
 
         l_popt, a_popt = self._prepare_input_file(photoopt)
@@ -434,7 +443,7 @@ class Daophot(DAORunner):
             elif by == 'y': by = 3
             elif by == 'mag': by = 4
             else:
-                raise Daophot.RunnerValueError('parameter by, if string must be either: "id", "x", "y" or "mag"')
+                raise Daophot.RunnerValueError('parameter by, if string must be either: "id", "x", "y" or "mag"', self)
         if decreasing is not None:
             by = -abs(by) if decreasing else abs(by)
         raise NotImplementedError("SORT command not implemented")
@@ -526,11 +535,12 @@ class Daophot(DAORunner):
         :rtype: DpOp_NEda
         """
         if photoopt is None and (apertures is None or IS==0 or OS==0):
-            raise Daophot.RunnerValueError('Apertures and IS and OS must be provided, explicitly or as photoopt file')
+            raise Daophot.RunnerValueError('Apertures and IS and OS must be provided, explicitly or as photoopt file',
+                                           self)
         if apertures is None:
             apertures = []
         elif len(apertures) > 12:
-            raise Daophot.RunnerValueError('apertures apertures list can contain maximum 12 elements')
+            raise Daophot.RunnerValueError('apertures apertures list can contain maximum 12 elements', self)
         self._get_ready_for_commands()  # wait for completion before changes in working dir
 
         l_popt, a_popt = self._prepare_input_file(photoopt)

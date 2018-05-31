@@ -1,5 +1,9 @@
 import pandas as pd
+import numpy as np
 from astropy.table import Table
+from astropy.coordinates import SkyCoord
+import astropy.units as u
+from .fileformats import DAO
 
 # Subclassing pandas:
 # http://pandas.pydata.org/pandas-docs/stable/internals.html#subclassing-pandas-data-structures
@@ -51,13 +55,13 @@ class StarList(pd.DataFrame):
         self.DAO_type = src.DAO_type
         self.DAO_hdr = src.DAO_hdr
 
-    def count(self):
+    def stars_number(self):
         """returns number of stars in list"""
         return self.shape[0]
 
     def renumber(self, start=1):
-        """Renumbers starlist (in place), updating `id` column and index to range start.. start+count"""
-        self['id'] = range(start, self.count()+start)
+        """Renumbers starlist (in place), updating `id` column and index to range start.. start+stars_number"""
+        self['id'] = range(start, self.stars_number() + start)
         self.index = self.id
 
     def to_table(self):
@@ -95,3 +99,50 @@ class StarList(pd.DataFrame):
         if len(dao_hdr) > 0:
             sl.DAO_hdr = dao_hdr
         return sl
+
+    @classmethod
+    def from_skycoord(cls, coo):
+        """
+        Create a `StarList` from a :class:`astropy.coordinates.SkyCoord` instance
+
+        Parameters
+        ----------
+        coo : :class:`astropy.coordinates.SkyCoord`
+            Source
+        Returns
+        -------
+        sl : `StarList`
+            A `StarList`instance
+        """
+        sl = StarList(
+            np.array([coo.ra.to_string(sep=':', unit=u.hourangle), coo.dec.to_string(sep=':', unit=u.deg)]).T,
+                      columns=['ra', 'dec'])
+        sl.DAO_type = DAO.RADEC_FILE
+        sl.renumber()
+        return sl
+
+    def radec_deg_from_hmsdms(self):
+        sky = SkyCoord(self.ra, self.dec, unit=(u.hourangle, u.deg))
+        self['ra_deg'] = sky.ra.deg
+        self['dec_deg'] = sky.dec.deg
+
+    def radec_hmsdms_from_deg(self):
+        sky = SkyCoord(self.ra_deg, self.dec_deg, unit=u.deg)
+        self['ra'] = sky.ra.to_string(sep=':', pad=True, unit=u.hourangle)
+        self['dec'] = sky.dec.to_string(sep=':',pad=True, alwayssign=True)
+
+    def to_skycoords(self):
+        try:
+            sky = SkyCoord(self.ra, self.dec, unit=(u.hourangle, u.deg))
+        except:
+            sky = SkyCoord(self.ra_deg, self.dec_deg, unit=u.deg)
+        return sky
+
+    def xy_from_radec(self, fitsimage):
+        from astwro.coord import skyradec2xy
+        try:
+            x,y = skyradec2xy(self.ra_deg, self.dec_deg, unit='deg', transformer=fitsimage)
+        except:
+            x,y = skyradec2xy(self.ra, self.dec, unit=(u.hourangle, u.deg),  transformer=fitsimage)
+        self['x'] = x
+        self['y'] = y
