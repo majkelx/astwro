@@ -7,6 +7,9 @@ The format is inspired by [Keep a Changelog](http://keepachangelog.com/en/1.0.0/
 
 [Unreleased]
 ============
+Added
+-----
+* Extended filtering `gapick`
 
 [0.7.0] -
 =======

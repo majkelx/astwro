@@ -18,8 +18,8 @@ This also installs `astwro.tools` command line scripts.
 
 Dependencies
 ------------
-`astwro` is developed and tested on Python 2.7. Most of the code is written with Python 3 compatibility in mind,
-so if there will be such need, the port to that version will be made.
+Developed of `astwro` have been switched to Python 3. Most of the code still works with Python 2,
+but support for  this version will be dropped.
 
 The different submodules have different requirements, the common requirements are:
 

@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 #from scipy import bin
 import numpy as np
 from scipy.stats import sigmaclip
+from scipy.optimize import curve_fit
 from cached_property import cached_property
 
 
@@ -16,7 +17,7 @@ def err_poly_fit(mag, err):
 
 class PhotError(object):
     def __init__(self, mag, err, sigma_clip=3.0, bins='auto', fit_increasing_wing_only=True,
-                 meanfn=np.mean, weighted_fit=False, fitting_order=3):
+                 meanfn=np.mean, weighted_fit=True, fitting_order=6, fitplussigma=3.0):
         super(PhotError, self).__init__()
         self._mag = mag
         self._err = err
@@ -26,6 +27,7 @@ class PhotError(object):
         self.meanfn = meanfn
         self.weighted_fit = weighted_fit
         self.fitting_order = fitting_order
+        self.fitplussigma = fitplussigma
 
     @cached_property
     def mag(self):
@@ -120,7 +122,9 @@ class PhotError(object):
 
     @cached_property
     def mean_mask(self):
-        mask = np.isfinite(self.mag_means) & np.isfinite(self.err_means_monotonized)
+        mask = np.isfinite(self.mag_means) \
+               & np.isfinite(self.err_means_monotonized) \
+               & np.isfinite(self.err_means_stderr)
         return mask
 
     @cached_property
@@ -132,24 +136,70 @@ class PhotError(object):
             ret [0:leftcutout] = self.err_means[leftcutout]
         return ret
 
-
     @cached_property
     def fit(self):
-        x = self.mag_means[self.mean_mask]
-        y = self.err_means_monotonized[self.mean_mask]
-        w = None
-        if self.weighted_fit:
-            w = self.err_means_stderr[self.mean_mask] **-1.0  # for numpy polyfit ^-1 not ^-2 !!
-            w[~np.isfinite(w)] = 0.0
-        rank = min(len(x), 2)
-        return np.polyfit(x,y, self.fitting_order, w=w)
-
-    def evaluate_fit(self, x):
-        ret = np.zeros_like(x)
-        for n, c in enumerate(self.fit[::-1]):
-            ret += c * x**n
-        return ret
+        return self._fit(self.err_means_monotonized[self.mean_mask])
 
     @cached_property
     def err_fitted(self):
         return self.evaluate_fit(self.mag_means)
+
+    @cached_property
+    def fit_plus_sigmas(self):
+        return self._fit(self.err_means_monotonized[self.mean_mask]
+                         + self.fitplussigma*np.nan_to_num(self.err_means_stderr[self.mean_mask]))
+
+    @cached_property
+    def err_fitted_plus_sigmas(self):
+        return self.evaluate_fit_plus_sigmas(self.mag_means)
+
+    @cached_property
+    def outlayers_mask(self):
+        limit = self.evaluate_fit_plus_sigmas(self.mag)
+        return self.err > limit
+
+    def evaluate_fit(self, x):
+        return self._evaluate_fit(x, self.fit)
+
+    def evaluate_fit_plus_sigmas(self, x):
+        return self._evaluate_fit(x, self.fit_plus_sigmas)
+
+    def _fit(self, y):
+        x = self.mag_means[self.mean_mask]
+        s = None
+        if self.weighted_fit:
+            s = (self.err_means_stderr[self.mean_mask])
+
+        f = curve_fit(lambda t,a,b,c: a*np.exp(b*t)+c, x,y, sigma=s, absolute_sigma=True)
+        return f
+
+    def _evaluate_fit(self, x, fit):
+        ret = np.zeros_like(x)
+        return fit[0][0] * np.exp(fit[0][1] * x) + fit[0][2]
+
+    # def _fit_poly(self, y):
+    #     x = self.mag_means[self.mean_mask]
+    #     w = None
+    #     if self.weighted_fit:
+    #         w = self.err_means_stderr[self.mean_mask] **-1.0  # for numpy polyfit ^-1 not ^-2 !!
+    #         w[~np.isfinite(w)] = 0.0
+    #     rank = min(len(x), 2)
+    #     return np.polyfit(x,y, self.fitting_order, w=w)
+    #
+    # def _evaluate_fit_poly(self, x, fit):
+    #     ret = np.zeros_like(x)
+    #     for n, c in enumerate(fit[::-1]):
+    #         ret += c * x**n
+    #     return ret
+
+    @cached_property
+    def filtered_by_sigma_from_means(self):
+        return self._filter(self.err_means)
+
+    @cached_property
+    def filtered_by_sigma_from_means(self):
+        return self._filter(self.err_fitted)
+
+    def _filter(self, err_bin_values):
+
+        return

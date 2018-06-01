@@ -7,3 +7,4 @@ deap
 bitarray>=0.8
 munch
 cached_property
+matplotlib
