@@ -9,7 +9,18 @@ The format is inspired by [Keep a Changelog](http://keepachangelog.com/en/1.0.0/
 ============
 Added
 -----
-* Extended filtering `gapick`
+* `gapick`: generation of control diagram
+* `gapick`: extended filtering based on fitting err/mag relation from preliminary PSF astrometry - new options
+* `gapick`: cleaned up and extend logging
+* `gapick`: cleaned up `--help` output
+
+Changed
+-------
+* `gapick`: Minimized function is now mean of errors weighted by flux w=100^(-mag/5)
+* `gapick`: by default (until `--include-psf`) PSF candidates are excluded from error evaluation
+* `gapick`: options with underscore changed, e.g. `--out_dir` to `--out-dir`
+* `gapick`: doesnt start without FITS file. For run on demo file, use new `--demo` option
+
 
 [0.7.0] -
 =======

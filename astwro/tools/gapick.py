@@ -29,6 +29,7 @@ import pickle
 import time
 from datetime import timedelta
 from copy import deepcopy
+
 try:
     from itertools import izip_longest as zip_longest
 except ImportError:
@@ -46,22 +47,9 @@ import astwro.starlist as sl
 import astwro.pydaophot as dao
 import astwro.tools
 import astwro.utils as utils
+from astwro.phot import PhotError
 
 _time_format = '%a %H:%M:%S'
-
-def check_arguments(arg):
-    if len(arg.ga_init_prob) > 2:
-        logging.error('--ga_init_prob/-I must be followed by one or two numbers')
-        raise ValueError('To many numbers in ga_init_prob list')
-    if len(arg.ga_init_prob) == 1:
-        arg.ga_init_prob = [arg.ga_init_prob[0], arg.ga_init_prob[0]]
-    if max(arg.ga_init_prob) > 0.99 or min(arg.ga_init_prob) < 0.01:
-        logging.error('--ga_init_prob/-I must be from range [0.01 : 0.99]')
-        raise ValueError('ga_init_prob out of range')
-    if arg.ga_init_prob[0] > arg.ga_init_prob[1]:
-        logging.error('--ga_init_prob/-I a b : a <= b must hold')
-        raise ValueError('ga_init_prob min val larger than max val')
-
 
 
 # Definitions for genetic algorithm:
@@ -75,38 +63,48 @@ def check_arguments(arg):
 # 2.1 Definition of routines used by algorithms: initializations, scoring
 def select_stars(starlist, genome):
     # type: (sl.StarList, bitarray) -> sl.StarList
-    #Select stars present in genome
+    # Select stars present in genome
     return starlist[genome.tolist()]
 
 
 def random_genome(ind_class, len, prob_limits):
     # type: (type, int, [float, float]) -> bitarray
-    #Create random genome of length `len` in which probability of '1' on any position is from `prob_limits` range.
+    # Create random genome of length `len` in which probability of '1' on any position is from `prob_limits` range.
     prob = random.uniform(prob_limits[0], prob_limits[1])
     return ind_class([random.random() <= prob for _ in range(len)])
 
 
 def clone_individual(individual):
     # type: (bitarray) -> bitarray
-    #Make a deepcopy-clone - deepcopy genome bitarray and associated fitness
+    # Make a deepcopy-clone - deepcopy genome bitarray and associated fitness
     n = deepcopy(individual)
     n.fitness = deepcopy(individual.fitness)
     return n
 
+
 def calc_spectrum(pop):
-    #calculates 'spectrogram' of population
-    #which is a statistic of stars occurrences in population individuals
+    # calculates 'spectrogram' of population
+    # which is a statistic of stars occurrences in population individuals
     spec = numpy.zeros(len(pop[0]))
     for ind in pop:
         spec += ind.tolist()
     return spec
 
 
+# === astwro version <= 0.7.0
+# def fitness_for_als(als):
+#     # type: (sl.StarList) -> (float,)
+#     # Calucalates fitness from allstar result
+#     clipped = sigmaclip(als.chi)[0]
+#     return numpy.sqrt((clipped * clipped).sum()),  # fitness is tuple (val,)
+
+# === astwro version > 0.7.0
 def fitness_for_als(als):
     # type: (sl.StarList) -> (float,)
-    #Calucalates fitness from allstar result
-    clipped = sigmaclip(als.chi)[0]
-    return numpy.sqrt( (clipped*clipped).sum() ) ,  # fitness is tuple (val,)
+    # Calucalates fitness from allstar result
+    w = 100*(-als.mag/5)
+
+    return (als.chi*w).sum()/w.sum(),  # fitness is tuple (val,)
 
 
 def eval_population(population, candidates, workers, show_progress, fine_tune):
@@ -147,7 +145,7 @@ def eval_population_fine_psf(population, candidates, workers, show_progress):
                 worker['daophot'].wait_for_results()  # now wait before using results
                 active[i] = worker['daophot'].PSf_result.converged  # PSF is not always successful
                 if active[i]:
-                    worker['allstar'].ALlstar(stars='i.nei')       # enqueue calculation
+                    worker['allstar'].ALlstar(stars='i.nei')  # enqueue calculation
                     worker['allstar'].run(wait=False)  # asynchronous / parallel
         # second PSF
         for i, worker in enumerate(workers):
@@ -166,7 +164,7 @@ def eval_population_fine_psf(population, candidates, workers, show_progress):
             if active[i]:
                 worker['daophot'].wait_for_results()
                 if worker['daophot'].PSf_result.success:
-                    worker['allstar'].ALlstar(stars='i.nei')       # enqueue calculation
+                    worker['allstar'].ALlstar(stars='i.nei')  # enqueue calculation
                     worker['allstar'].run(wait=False)  # asynchronous / parallel
                 else:
                     active[i] = False
@@ -187,7 +185,7 @@ def eval_population_fine_psf(population, candidates, workers, show_progress):
             if active[i]:
                 worker['daophot'].wait_for_results()
                 if worker['daophot'].PSf_result.success:
-                    worker['allstar'].ALlstar(stars='als.ap')       # enqueue calculation
+                    worker['allstar'].ALlstar(stars='als.ap')  # enqueue calculation
                     worker['allstar'].run(wait=False)  # asynchronous / parallel
                 else:
                     active[i] = False
@@ -200,7 +198,7 @@ def eval_population_fine_psf(population, candidates, workers, show_progress):
                 f = fitness_for_als(all_s)
                 fitnesses.append(f)  # fitness is tuple (val,)
                 f_max = f if f_max is None or f_max[0] < f[0] else f_max
-#                f_max = f[0] if f_max is None else max(f_max, f[0])
+            #                f_max = f[0] if f_max is None else max(f_max, f[0])
             else:
                 fitnesses.append(None)
         # cut fitnesses if longer than population
@@ -244,7 +242,7 @@ def eval_population_simple(population, candidates, workers, show_progress):
                 worker['daophot'].wait_for_results()  # now wait before using results
                 active[i] = worker['daophot'].PSf_result.converged  # PSF is not always successful
                 if active[i]:
-                    worker['allstar'].ALlstar(stars='als.ap')       # enqueue calculation
+                    worker['allstar'].ALlstar(stars='als.ap')  # enqueue calculation
                     worker['allstar'].run(wait=False)  # asynchronous / parallel
         # wait for allstar for workers and process results
         for i, worker in enumerate(workers):
@@ -254,7 +252,7 @@ def eval_population_simple(population, candidates, workers, show_progress):
                 f = fitness_for_als(all_s)
                 fitnesses.append(f)  # fitness is tuple (val,)
                 f_max = f if f_max is None or f_max[0] < f[0] else f_max
-#                f_max = max(f_max, f)
+            #                f_max = max(f_max, f)
             else:
                 fitnesses.append(None)
         # cut fitnesses if longer than population
@@ -281,7 +279,7 @@ def _prepare_output_dir(outdir, overwrite, srcdir, arg):
             if overwrite:
                 rmtree(outdir)
             else:
-                logging.error('--out_dir:{} already exists and no --overwrite requested.'.format(outdir))
+                logging.error('--out-dir:{} already exists and no --overwrite requested.'.format(outdir))
                 raise Exception('Output directory {} exists.'.format(outdir))
         copytree(srcdir, outdir)
         logging.info('Results dir created: {}'.format(outdir))
@@ -292,22 +290,62 @@ def _prepare_output_dir(outdir, overwrite, srcdir, arg):
         gen_file = utils.cyclefile(outdir, basename, '.gen')
         # write down parameters
         with open(os.path.join(outdir, 'about.txt'), 'w') as f:
-            print ("astwro pydaophot/tools version: {}/{}\n".format(dao.__version__, astwro.tools.__version__), file=f)
+            print("astwro pydaophot/tools version: {}/{}\n".format(dao.__version__, astwro.tools.__version__), file=f)
             for k, v in arg.__dict__.items():
-                print ('{}\t= {}'.format(k,v), file=f)
+                print('{}\t= {}'.format(k, v), file=f)
         return lst_file, reg_file, gen_file, outdir
     else:
         return None, None, None, None
+
+
+def _plot_err(pe, pe_psf, psf, fig_file):
+    # type: (PhotError) -> None
+    try:
+        import matplotlib
+        matplotlib.use('pdf')
+        import matplotlib.pyplot as plt
+    except ImportError:
+        logging.warning("'matplotlib' cannot be imported. No control diagrams will be generated")
+    except:
+        logging.warning('matplotlib PDF output cannot be initialized. No control diagrams will be generated')
+        return
+    else:
+        try:
+            plt.rc('text', usetex=True)
+        except:
+            pass
+
+        ax = plt.subplot()
+        ls = numpy.linspace(pe.mag.min(), pe.mag.max())
+        ax.plot(pe.mag[~pe.outlayers_mask], pe.err[~pe.outlayers_mask], '.', alpha=0.7, ms=2,
+                label='training set')
+        ax.errorbar(pe.mag_means, pe.err_means, yerr=pe.err_means_stderr * 1.0, fmt='D', markerfacecolor='none', alpha=0.7, lw=1,
+                    label='error bins')
+        ax.plot(ls, pe.evaluate_fit(ls), lw=1,
+                label='error fit')
+        ax.plot(ls, pe.evaluate_fit_plus_sigmas(ls),  '--', lw=1,
+                label='error$+{:.1f}\\sigma$ fit (training limit)'.format(pe.fitplussigma))
+        ax.plot(ls, pe_psf.evaluate_fit_plus_sigmas(ls),  '--', lw=1,
+                label='error$+{:.1f}\\sigma$ fit (PSF limit)'.format(pe_psf.fitplussigma))
+        ax.plot(pe.mag[pe.outlayers_mask], pe.err[pe.outlayers_mask], '.', alpha=0.7, ms=3,
+                label='outlayers')
+        ax.plot(psf.mag, psf.mag_err, '.', alpha=0.7, ms=3,
+                label='PSF candidates')
+        ax.set_xlabel('mag'); ax.set_ylabel('mag error')
+        ax.legend()
+        ax.figure.savefig(fig_file, bbox_inches='tight')
+        ax.set_ylim(0,0.2)
+        ax.figure.savefig('{}_zoomed{}'.format(*os.path.splitext(fig_file)), bbox_inches='tight')
+        logging.info('Control plot mag/err {} generated'.format(fig_file))
+
 
 def __do(arg):
     # Main routine, common for command line, and python scripts call
     # :type arg: Namespace
 
-
     start_time = time.time()
 
-    # Configure logging
-    logging.basicConfig(format='[%(levelname)s] %(module)s: %(message)s', level=arg.loglevel.upper())
+    # Configure progress logging
     clogger = logging.getLogger('clean logger')  # create another logger for stats without prefixes (clean)
     chandler = logging.StreamHandler()
     chandler.setFormatter(logging.Formatter('%(message)s'))
@@ -315,7 +353,6 @@ def __do(arg):
     clogger.addHandler(chandler)
 
     check_arguments(arg)
-
 
     # image_file
     if arg.image is None:
@@ -332,22 +369,26 @@ def __do(arg):
 
     # get single daophot and ATtach file
     dp = dao.Daophot(image=arg.image, daophotopt=arg.daophot_opt)
+    al = dao.Allstar(image=arg.image, dir=dp.dir)
 
     # all stars file
     if not arg.all_stars_file:
-        logging.warning('No all-stars-file provided, Stars will be found by daophot FIND (frames av/sum: %d/%d)', arg.frames_av, arg.frames_sum)
+        logging.warning('No all-stars-file provided, Stars will be found by daophot FIND (frames av/sum: %d/%d)',
+                        arg.frames_av, arg.frames_sum)
         find = dp.FInd(arg.frames_av, arg.frames_sum)
-        logging.info('FIND found {} stars, sky estimation: {}, err/dev: {}/{}'.format(find.stars, find.sky, find.err, find.skydev))
+        logging.info('{} stars found by FIND, sky estimation: {}, err/dev: {}/{}'.format(find.stars, find.sky, find.err,
+                                                                                         find.skydev))
         arg.all_stars_file = find.starlist_file
 
     # photometry
-    if not arg.photo_opt: # no file no problem, but recreate default radius if not provided
+    if not arg.photo_opt:  # no file no problem, but recreate default radius if not provided
         if arg.photo_is == 0:
             arg.photo_is = 35
         if arg.photo_os == 0:
             arg.photo_os = 50
         if not arg.photo_ap:
             arg.photo_ap = [8]
+    logging.info('Performing preliminary {} pixels aperture  photometry'.format(arg.photo_ap[0]))
     photometry = dp.PHotometry(photoopt=arg.photo_opt,
                                IS=arg.photo_is,
                                OS=arg.photo_os,
@@ -355,12 +396,13 @@ def __do(arg):
                                stars=arg.all_stars_file)
 
     # pick PFS stars candidates
-    if not arg.psf_stars_file:
+    PICKcandidates = not arg.psf_stars_file
+    if PICKcandidates:
         pick = dp.PIck(arg.stars_to_pick, arg.faintest_to_pick)
         arg.psf_stars_file = pick.picked_stars_file
 
     # psf (for errors collection)
-    dp.PSf(psf_stars=arg.psf_stars_file)
+    PSf_result = dp.PSf(psf_stars=arg.psf_stars_file)
 
     # all stars (filtering by photometry errors and magnitudes)
     stars = photometry.photometry_starlist
@@ -369,38 +411,75 @@ def __do(arg):
     count1 = stars.shape[0]
     stars = stars[stars.mag_err < arg.max_ph_err]
     count2 = stars.shape[0]
-    logging.info('From {} stars {} left after filtering against {} magnitude threshold, '
-                 'then finally {} left after {} photometry error threshold'
-                 .format(count0, count1, arg.max_ph_mag, count2, arg.max_ph_err))
+    logging.info('{} (of {}) stars left after filtering against {:.2f} photometry magnitude threshold, '
+                 .format(count1, count0, arg.max_ph_mag))
+    logging.info('{}  left after {:.2f} aperture photometry error threshold'
+                 .format(count2, arg.max_ph_err))
+
+    logging.info('Performing preliminary PSF profile photometry')
+    ALlstar_result = al.ALlstar(stars=stars)
+    logging.info('{} stars converged in PSF profile photometry'
+                 .format(ALlstar_result.stars_no[0]))
+    logging.info('Fitting PSF profile photometry errors')
+    pe = PhotError(ALlstar_result.als_stars.mag, ALlstar_result.als_stars.mag_err, fitplussigma=arg.clip_fit_sigmas)
+    logging.info('{} stars left, after excluding profile photometry error {} sigma outliers'
+                 .format((~pe.outlayers_mask).sum(), arg.clip_fit_sigmas))
+    stars = ALlstar_result.als_stars[~pe.outlayers_mask]
+
     # for the sake of optimisation we write starlist to file to avoid multiple serialization of this list
     # (instead of more obvious providing starlist as the allstar argument)
     dp.write_starlist(stars, 'als.ap', sl.DAO.AP_FILE)
 
     # candidates (filter out big psf errors)
+    pe2 = None
+    if PICKcandidates: # do it again
+        if arg.clip_fit_sigmas > arg.clip_psf_fit_sigmas: # tighter filtering for PSF candids
+            logging.info('Excluding {} sigma outlayers for PICK'.format(arg.clip_psf_fit_sigmas))
+            pe2 = PhotError(ALlstar_result.als_stars.mag, ALlstar_result.als_stars.mag_err,
+                           fitplussigma=arg.clip_psf_fit_sigmas)
+            cands_for_cands = ALlstar_result.als_stars[~pe2.outlayers_mask]
+        else:
+            cands_for_cands = stars
+        pick = dp.PIck(arg.stars_to_pick, arg.faintest_to_pick, photometry=cands_for_cands)
+        logging.info('{} PSF stars candidates selected by PICK'.format(pick.stars))
+        arg.psf_stars_file = pick.picked_stars_file
+        PSf_result = dp.PSf(psf_stars=arg.psf_stars_file) # collect PSF errors
     candidates = dp.read_starlist(arg.psf_stars_file, add_psf_errors=True)
     org_cand_no = candidates.stars_number()
-    err = dp.PSf_result.errors
+    err = PSf_result.errors
     averr = err.psf_err.mean()
-    err = err[(err.psf_err < arg.max_psf_err_mult*averr) & (err.flag == ' ')]  # filter out big errors and * or ? marked stars
+    err = err[(err.psf_err < arg.max_psf_err_mult * averr) & (
+                err.flag == ' ')]  # filter out big errors and * or ? marked stars
     candidates = candidates.loc[err.index]
 
     # candidates = candidates[candidates.psf_err < arg.max_psf_err]  # old filter, new above
     logging.info(
-        "{} good candidates ({} rejected: * or ? or psf error exceeded max-psf-err-mult*averge-error = {}*{} = {})"
-        .format(
-        candidates.stars_number(),
-        org_cand_no - candidates.stars_number(),
-        arg.max_psf_err_mult,
-        averr,
-        arg.max_psf_err_mult * averr)
+        "{} good candidates ({} rejected: * or ? or psf error exceeded max-psf-err-mult*averge-error "
+        "= {:.2f}*{:.2f} = {:.2f})"
+            .format(
+            candidates.stars_number(),
+            org_cand_no - candidates.stars_number(),
+            arg.max_psf_err_mult,
+            averr,
+            arg.max_psf_err_mult * averr)
     )
+    if arg.include_psf:
+        logging.info('PSF star candidates stays in training set (--include-psf)')
+    else:
+        overlapping = stars.index.isin(candidates.index)
+        stars = stars[~overlapping]
+        logging.info('{} stars left in training set after exclusion PSF star candidates (no --include-psf)'
+                     .format(stars.stars_number()))
 
     if candidates.stars_number() < 15:
-        logging.error("Number of candidates lass than 15. GA needs more. Sorry")
+        logging.error("Number of candidates lass than 15. GA needs more. Sorry...")
+
+    if stars.stars_number() < 15:
+        logging.error("Number stars in training set lass than 15. GA needs more. Sorry...")
 
     # Prepare output directory for results
     lst_file, reg_file, gen_file, result_dir = _prepare_output_dir(arg.out_dir, arg.overwrite, str(dp.dir), arg)
-
+    _plot_err(pe, pe2, candidates, os.path.join(arg.out_dir, 'prel_psf_filtering.pdf'))
 
     #  From all candidates find best subset, where best means minimizing mean of errors form allstar
     #       using genetic algorithm
@@ -438,7 +517,7 @@ def __do(arg):
     workers_logger = logging.getLogger('worker')
     workers_logger.setLevel('ERROR')  # prevent workers flood output with logrecords
     for i in range(arg.parallel):
-        d = dp.clone()       # clone previously used daophot
+        d = dp.clone()  # clone previously used daophot
         d.batch_mode = True
         a = dao.Allstar(dir=d.dir, image=d.image, batch=True, options={'MA': 100})
         d.logger = workers_logger
@@ -448,7 +527,7 @@ def __do(arg):
     # Setup initial population, HoF and logbook and  or load it from checkpoint when continuing previous calculation
     start_gen = 0
 
-#    if arg.checkpoint:   ## Not implemented
+    #    if arg.checkpoint:   ## Not implemented
     if False:
         with open(os.path.expanduser(arg.checkpoint), "rb") as f:
             checkpoint = pickle.load(f)
@@ -503,7 +582,8 @@ def __do(arg):
 
         # calculate fitnesses of new individuals
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = eval_population(invalid_ind, candidates, workers, show_progress=not arg.no_progress, fine_tune=arg.fine)
+        fitnesses = eval_population(invalid_ind, candidates, workers, show_progress=not arg.no_progress,
+                                    fine_tune=arg.fine)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
         # New population from offspring
@@ -511,7 +591,8 @@ def __do(arg):
 
         # Stats
         # hof.update(pop)  # not implemented yet, __deapcopy__ of the Individual should work first
-        ETA = time.strftime(_time_format, time.localtime(evolution_start_time + (time.time() - evolution_start_time) * arg.ga_max_iter / g))
+        ETA = time.strftime(_time_format, time.localtime(
+            evolution_start_time + (time.time() - evolution_start_time) * arg.ga_max_iter / g))
         record = stats.compile(pop)
         logbook.record(gen=g, spectrum=calc_spectrum(pop), **record)
         clogger.info('{}\t ETA: {}'.format(logbook.stream, ETA))
@@ -551,7 +632,13 @@ def __do(arg):
     return best_stars
 
 
+__arg_parser_singlethon = None
+
+
 def __arg_parser():
+    global __arg_parser_singlethon
+    if __arg_parser_singlethon:
+        return __arg_parser_singlethon
     import argparse
     parser = argparse.ArgumentParser(
         description='Find best PSF stars using genetic algorithm running the daophot/allstar'
@@ -564,89 +651,119 @@ def __arg_parser():
         epilog=commons.version_string(),
     )
     parser.add_argument('image', default=None, nargs='?',
-                        help='FITS image file (default: astwro sample image for tests)')
-    parser.add_argument('--all-stars-file', '-c', metavar='FILE', default=None,
-                        help='all stars input file in one of daophot\'s formats (default: obtained by daophot FIND)')
-    parser.add_argument('--psf-stars-file', '-l', metavar='FILE', default=None,
-                        help='PSF candidates input file in one of daophot\'s formats, the result of algorithm is '
-                             'a subset of those stars (default: obtained by daophot PICK)')
-    parser.add_argument('--frames-av', metavar='n', type=int, default=1,
-                        help='frames ave - parameter of daophot FIND when --all-stars-file not provided  (default: 1)')
-    parser.add_argument('--frames-sum', metavar='n', type=int, default=1,
-                        help='frames summed - parameter of daophot FIND when --all-stars-file not provided (default: 1)')
-    parser.add_argument('--daophot-opt', '-D', metavar='FILE', default=None,
-                        help='daophot.opt file for daophot (default: internal)')
-    parser.add_argument('--photo-opt', '-O', metavar='FILE', default=None,
-                        help='photo.opt file for aperture photometry (default: none)')
-    parser.add_argument('--photo-is', metavar='r', type=int, default=0,
-                        help='PHOTOMETRY inner sky radius, overwrites photo.opt, (default: from --photo-opt or 35)')
-    parser.add_argument('--photo-os', metavar='r', type=int, default=0,
-                        help='PHOTOMETRY outher sky radius, overwrites photo.opt, (default: from --photo-opt or 50)')
-    parser.add_argument('--photo-ap', metavar='r', type=int, default=[], nargs='+',
-                        help='PHOTOMETRY apertures radius (up to 12), overwrites photo.opt, '
-                             '(default: from --photo-opt or 8)')
-    parser.add_argument('--stars-to-pick', '-P', metavar='n', type=int, default=100,
-                        help='number of stars to PICK as candidates when --stars-to-pick not provided (default: 100)')
-    parser.add_argument('--faintest-to-pick', metavar='MAG', type=int, default=20,
-                        help='faintest magnitude to PICK as candidates when --stars-to-pick not provided (default: 20)')
-    parser.add_argument('--fine', '-f', action='store_true',
-                        help='fine tuned PSF calculation (3 iter) for crowded fields, without this option no neighbours'
-                             'subtraction will be performed')
-    parser.add_argument('--max-psf-err-mult', metavar='x', type=float, default=3.0,
-                        help='threshold for PSF errors of candidates - multipler of average error; '
-                             'candidates with PSF error greater than x*av_err will be rejected '
-                             '(default 3.0)')
-    parser.add_argument('--max-ph-err', metavar='x', type=float, default=0.1,
-                        help='threshold for photometry error of stars for processing by allstar; '
-                             'stars for which aperture photometry (daophot PHOTO) error is greater than x '
-                             'will be excluded form allstar run and have no effect on quality measurment '
-                             '(default 0.1)')
-    parser.add_argument('--max-ph-mag', metavar='m', type=float, default=20,
-                        help='threshold for photometry magnitude of stars for processing by allstar; '
-                             'stars for which aperture photometry (daophot PHOTO) magnitude is greater than m '
-                             '(fainter than m) will be excluded form allstar run and have no effect on quality '
-                             'measurement (default 20)')
-    parser.add_argument('--parallel', '-p', metavar='n', type=int, default=8,
-                        help='how many parallel processes can be forked; '
-                             'n=1 avoids parallelism (default: 8)')
-    parser.add_argument('--out_dir', '-d', metavar='output_dir', type=str, default='RESULTS',
-                        help='output directory; directory will be created and result files will be stored there;'
-                             ' directory should not exist or --overwrite flag should be set'
-                             ' (default: RESULTS)')
-    parser.add_argument('--overwrite', '-o', action='store_true',
-                        help='if directory specified by --out_dir parameter exists, '
-                             'then ALL its content WILL BE DELETED')
-    # parser.add_argument('--checkpoint', '-C', metavar='file.chk', type=str, default=None,
+                        help='FITS image file (obligatory if no --demo)')
+    g_dao = parser.add_argument_group('DAOPHOT/ALLSTARS related parameters',
+                                      'Those parameters are used by DAOPHOT/ALLSTARS workflow. gapick optimizes PSF '
+                                      'fitting errors of that workflow applied to training set stars as a function'
+                                      'of \'PSF stars\' sets - stars used to derive PSF function')
+    g_dao.add_argument('-c', '--all-stars-file', metavar='FILE', default=None,
+                       help='all stars input file in one of daophot\'s formats (default: obtained by daophot FIND)')
+    g_dao.add_argument('-D', '--daophot-opt', metavar='FILE', default=None,
+                       help='daophot.opt file for daophot (default: internal)')
+    g_dao.add_argument('--frames-av', metavar='n', type=int, default=1,
+                       help='frames ave - parameter of daophot FIND when --all-stars-file not provided  (default: 1)')
+    g_dao.add_argument('--frames-sum', metavar='n', type=int, default=1,
+                       help='frames summed - parameter of daophot FIND when --all-stars-file not provided (default: 1)')
+    g_dao.add_argument('-O', '--photo-opt', metavar='FILE', default=None,
+                       help='photo.opt file for aperture photometry (default: none)')
+    g_dao.add_argument('--photo-is', metavar='r', type=int, default=0,
+                       help='PHOTOMETRY inner sky radius, overwrites photo.opt, (default: from --photo-opt or 35)')
+    g_dao.add_argument('--photo-os', metavar='r', type=int, default=0,
+                       help='PHOTOMETRY outher sky radius, overwrites photo.opt, (default: from --photo-opt or 50)')
+    g_dao.add_argument('--photo-ap', metavar='r', type=int, default=[], nargs='+',
+                       help='PHOTOMETRY apertures radius (up to 12), overwrites photo.opt, '
+                            '(default: from --photo-opt or 8)')
+    g_dao.add_argument('-l', '--psf-stars-file', metavar='FILE', default=None,
+                       help='PSF candidates input file in one of daophot\'s formats, the result of algorithm is '
+                            'a subset of those stars (default: obtained by daophot PICK)')
+    g_dao.add_argument('-P', '--stars-to-pick', metavar='n', type=int, default=100,
+                       help='number of stars to PICK as candidates when --stars-to-pick not provided (default: 100)')
+    g_dao.add_argument('--faintest-to-pick', metavar='MAG', type=int, default=20,
+                       help='faintest magnitude to PICK as candidates when --stars-to-pick not provided (default: 20)')
+    g_dao.add_argument('-f', '--fine', action='store_true',
+                       help='fine tuned PSF calculation (3 iter) for crowded fields, without this option no neighbours'
+                            'subtraction will be performed (slower, usually not needed)')
+    g_flt = parser.add_argument_group('Filtering training set stars',
+                                      'Options controls which stars will be included in a training set -- whose '
+                                      'residuals after the PSF fitting will be minimized by genetic algorithm')
+    g_flt.add_argument('-x', '--include-psf', action='store_true',
+                       help='NEW | include candidates of PSF stars in training set; by default PSF candidates are'
+                            'excluded from calculation of minimized PSF error; may be included if there is low number'
+                            'of stars')
+    g_flt.add_argument('--max-ph-err', metavar='x', type=float, default=0.1,
+                       help='threshold of aperture photometry error for training set stars; '
+                            'stars for which aperture photometry (daophot PHOTO) error is greater than x '
+                            'will be excluded and have no effect on minimization '
+                            '(default 0.1)')
+    g_flt.add_argument('--max-ph-mag', metavar='m', type=float, default=20,
+                       help='threshold of aperture photometry magnitude of stars for for training set stars; '
+                            '(analogous to --max-ph-err)stars for which aperture photometry (daophot PHOTO) magnitude '
+                            'is greater than m (fainter than m) will be excluded form allstar run and have no effect '
+                            'on quality measurement (default 20)')
+    g_flt.add_argument('--clip-fit-sigmas', metavar='x', type=float, default=3.0,
+                       help='NEW | threshold of errors from the preliminary PSF fitting (allstars) in sigmas above '
+                            'mean error level for specific magnitude (a mean error level for the magnitude is fitted) '
+                            'stars with preliminary PSF fitting error greater than mean_err(mag)+x*sigma will '
+                            'be rejected from training set (default 3.0)')
+    g_psf = parser.add_argument_group('Filtering candidates for PSF  stars',
+                                      'Options controls which stars can be considered as PSF candidates. '
+                                      'Filtering is applied to stars provided in --psf-stars-fil or found by '
+                                      'daophot/PICK')
+    g_psf.add_argument('--max-psf-err-mult', metavar='x', type=float, default=3.0,
+                       help='threshold of PSF errors of PSF candidates - as multiplier of average PSF error; '
+                            'candidates with PSF error (from daophot PSF command) greater than x*av_err will '
+                            'be rejected (as well as other marked ? or * by daophot/PSF command)'
+                            '(default 3.0)')
+    g_psf.add_argument('--clip-psf-fit-sigmas', metavar='x', type=float, default=2.0,
+                       help='NEW | threshold of errors from the preliminary PSF fitting (allstars) in sigmas above '
+                            'mean error level for specific magnitude (a mean error level for the magnitude is fitted) '
+                            'candidates with preliminary PSF fitting error greater than mean_err(mag)+x*sigma will '
+                            'be rejected (default 2.0)')
+    g_ga = parser.add_argument_group('Genetic algorithm parameters')
+    g_ga.add_argument('-I', '--ga-init-prob', metavar='x', default=[0.3, 0.8], type=float, nargs='+',
+                      help='what portion of candidates is used to initialize GA individuals;'
+                           ' e.g. if there is 100 candidates, each of them will be '
+                           ' chosen to initialize individual genome with probability x; '
+                           ' in other words if x=0.3 first population in GA will contain'
+                           ' individuals with around 30 stars each; '
+                           ' two numbers (e.g. -I 0.3 0.8) indicates range: for each initial genome'
+                           ' random number from that range will be taken (spreading number of initial stars)'
+                           ' (default: 0.3 0.8)')
+    g_ga.add_argument('-i', '--ga-max-iter', metavar='n', default=50, type=int,
+                      help='maximum number of iterations of generic algorithm - generations (default: 50)')
+    g_ga.add_argument('-n', '--ga-pop', metavar='n', default=80, type=int,
+                      help='population size of GA (default: 80)')
+    g_ga.add_argument('--ga-cross-prob', metavar='x', default=0.5, type=float,
+                      help='crossover probability of GA (default: 0.5)')
+    g_ga.add_argument('--ga-mut-prob', metavar='x', default=0.2, type=float,
+                      help='mutation probability of GA - probability to became a mutant (default: 0.2)')
+    g_ga.add_argument('--ga-mut-str', metavar='x', default=0.05, type=float,
+                      help='mutation strength of GA - probability of every bit flip in mutant (default: 0.05)')
+    g_cnt = parser.add_argument_group('gapick run control parameters')
+    g_cnt.add_argument('-p', '--parallel', metavar='n', type=int, default=8,
+                       help='how many parallel processes can be forked; '
+                            'n=1 avoids parallelism (default: 8)')
+    g_cnt.add_argument('-d', '--out-dir', metavar='output_dir', type=str, default='RESULTS',
+                       help='output directory; directory will be created and result files will be stored there;'
+                            ' directory should not exist or --overwrite flag should be set'
+                            ' (default: RESULTS)')
+    g_cnt.add_argument('-o', '--overwrite', action='store_true',
+                       help='if directory specified by --out_dir parameter exists, '
+                            'then ALL its content WILL BE DELETED')
+    # g_cnt.add_argument('-C', '--checkpoint', metavar='file.chk', type=str, default=None,
     #                     help='restore evaluation from checkpoint; algorithm saves checkpoint.chk file every generation,'
     #                          ' which allows resuming evolution, even with another parameters')
-    parser.add_argument('--ga_init_prob', '-I', metavar='x', default=[0.3, 0.8], type=float, nargs='+',
-                        help='what portion of candidates is used to initialize GA individuals;'
-                             ' e.g. if there is 100 candidates, each of them will be '
-                             ' chosen to initialize individual genome with probability x; '
-                             ' in other words if x=0.3 first population in GA will contain'
-                             ' individuals with around 30 stars each; '
-                             ' two numbers (e.g. -I 0.3 0.8) indicates range: for each initial genome'
-                             ' random number from that range will be taken (spreading number of initial stars)'
-                             ' (default: 0.3 0.8)')
-    parser.add_argument('--ga_max_iter', '-i', metavar='n', default=50, type=int,
-                        help='maximum number of iterations of generic algorithm - generations (default: 50)')
-    parser.add_argument('--ga_pop', '-n', metavar='n', default=80, type=int,
-                        help='population size of GA (default: 80)')
-    parser.add_argument('--ga_cross_prob', metavar='x', default=0.5, type=float,
-                        help='crossover probability of GA (default: 0.5)')
-    parser.add_argument('--ga_mut_prob', metavar='x', default=0.2, type=float,
-                        help='mutation probability of GA - probability to became a mutant (default: 0.2)')
-    parser.add_argument('--ga_mut_str', metavar='x', default=0.05, type=float,
-                        help='mutation strength of GA - probability of every bit flip in mutant (default: 0.05)')
-    parser.add_argument('--loglevel', '-L', metavar='level', default='info',
-                        help='logging level: debug, info, warning, error, critical (default: info)')
-    parser.add_argument('--no_stdout', '-t', action='store_true',
-                        help='suppress printing result (list of best choice of PSF stars) to stdout at finish')
-    parser.add_argument('--no_progress', '-b',  action='store_true',
-                        help='suppress showing progress bar')
-    parser.add_argument('--version', '-v',  action='store_true',
-                        help='show version and exit')
-
+    g_cnt.add_argument('-L', '--loglevel', metavar='level', default='info',
+                       help='logging level: debug, info, warning, error, critical (default: info)')
+    g_cnt.add_argument('-t', '--no-stdout', action='store_true',
+                       help='suppress printing result (list of best choice of PSF stars) to stdout at finish')
+    g_cnt.add_argument('-b', '--no-progress', action='store_true',
+                       help='suppress showing progress bar')
+    g_cnt.add_argument('-v', '--version', action='store_true',
+                       help='show version and exit')
+    g_cnt.add_argument('--demo', action='store_true',
+                       help='use internal demo FITS file')
+    __arg_parser_singlethon = parser
     return parser
 
 
@@ -658,23 +775,51 @@ def main(**kwargs):
     return __do(args)
 
 
+def check_arguments(arg, parser=None):
+    if len(arg.ga_init_prob) > 2:
+        exit_error('--ga-init-prob parameter be one or two numbers', parser)
+    if len(arg.ga_init_prob) == 1:
+        arg.ga_init_prob = [arg.ga_init_prob[0], arg.ga_init_prob[0]]
+    if max(arg.ga_init_prob) > 0.99 or min(arg.ga_init_prob) < 0.01:
+        exit_error('--ga-init-prob must be in range [0.01 : 0.99]', parser)
+    if arg.ga_init_prob[0] > arg.ga_init_prob[1]:
+        exit_error('--ga-init-prob a b : a <= b must hold', parser)
+    if not arg.demo and not arg.image:
+        exit_error('FITS image parameter not provided (and no --version, --help or --demo)', parser)
+
+
+def exit_error(message, parser):
+    logging.error(message)
+    if parser:
+        parser.error()
+        parser.exit(1)
+    else:
+        raise ValueError(message)
+
 
 def info():
     """Prints commandline help message"""
     commons.info(__arg_parser())
 
+
 def commandline_entry():
-        # Entry point for command line
+    # Entry point for command line
     __args = __arg_parser().parse_args()  # parse command line arguments
     if __args.version:
-        print ('astwro.tools '+astwro.tools.__version__)
+        print('astwro.tools ' + astwro.tools.__version__)
         exit()
+
+    # Configure logging
+    #    logging.basicConfig(format='[%(levelname)s] %(module)s: %(message)s', level=__args.loglevel.upper())
+    logging.basicConfig(format='%(levelname)7s | %(message)s', level=__args.loglevel.upper())
+    check_arguments(__args, __arg_parser())
     __stars = __do(__args)  # call main routine - common form command line and python calls
     if __stars is None:
         return 1
     if not __args.no_stdout:
         print('\n'.join(map(str, __stars.index)))
     return 0
+
 
 if __name__ == '__main__':
     code = commandline_entry()
