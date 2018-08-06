@@ -59,6 +59,11 @@ class Runner(object):
             return (super(Runner.ExitError,self).__str__()
                     + '\n>> Process exit code: {}'.format(self.code))
 
+    class NoFileError(RunnerException):
+        def __init__(self, message, runner, filename):
+            super(Runner.NoFileError, self).__init__(message, runner)
+            self.filename = filename
+
     class RunnerValueError(ValueError, RunnerException):
         pass
 
@@ -402,7 +407,14 @@ class Runner(object):
                 raise Runner.ExitError('Execution failed, exit code {}'.format(self.returncode), self, self.returncode)
         # copy results - output files from runners directory to user specified path
         for f in self.ext_output_files:
-            self.copy_from_runner_dir(self._runner_dir_file_name(f), f)
+            try:
+                self.copy_from_runner_dir(self._runner_dir_file_name(f), f)
+            except FileNotFoundError as e:
+                msg = '{} process does not produce expected output file {}<--{}'.format(self.executable, f,
+                                                                                        self._runner_dir_file_name(f))
+                self.logger.error(msg)
+                if self.raise_on_nonzero_exitcode:
+                    raise Runner.NoFileError(msg, self, self.returncode)
         # fill chained processors buffers
         self.__processors_chain_last.get_output_stream()
 

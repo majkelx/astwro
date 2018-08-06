@@ -22,6 +22,7 @@
     * increase version if needed
         astwro/version.py
         docs/conf.py
+        CHANGELOG.txt
     * run tests
         pytest
     * commit to git

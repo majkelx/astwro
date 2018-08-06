@@ -4,14 +4,20 @@ from __future__ import absolute_import, division, print_function, generators
 __metaclass__ = type
 
 import numpy as np
+import re
 import matplotlib.pyplot as plt
+from astwro.phot import DiffPhot
 
 
 class Plottable(object):
+    plot_styles =    ['alpha', 'ls', 'linestyle', 'c', 'color', 'lw', 'linewidth',
+                      'marker', 'mec', 'mew', 'mfc', 'ms', 'zorder', 'label']
+    scatter_styles = ['alpha', 'c', 's', 'marker', 'edgecolors', 'label']
     def __init__(self, **kwargs):
         super(Plottable, self).__init__()
-        plot_styles =    {s: None for s in 'alpha', 'ls', 'c', 'lw', 'marker', 'mec', 'mew', 'mfc', 'ms', 'zorder'}
-        scatter_styles = {s: None for s in 'alpha', 'c', 's', 'marker', 'edgecolors'}
+        _kwargs = kwargs
+        # plot_styles =    {s: None for s in 'alpha', 'ls', 'c', 'lw', 'marker', 'mec', 'mew', 'mfc', 'ms', 'zorder'}
+        # scatter_styles = {s: None for s in 'alpha', 'c', 's', 'marker', 'edgecolors'}
 
     def plot(self, ax=None, **kwargs):
         if ax is None:
@@ -26,6 +32,31 @@ class Plottable(object):
 
     def _plotonaxies(self, ax, **kwargs):
         pass
+
+    @staticmethod
+    def _style_kwargs(style, kwargs_list):
+        res = None
+        for kwargs in kwargs_list:
+            try: res = kwargs[style]
+            except KeyError: pass
+        return res
+
+    @staticmethod
+    def _styles_kwargs(styles_list, kwargs_list):
+        res = {}
+        for s in styles_list:
+            kw = Plottable._style_kwargs(s, kwargs_list)
+            if kw is not None:
+                res[s] = kw
+        return res
+
+    @staticmethod
+    def _plot_styles_kwargs(kwargs_list):
+        return Plottable._styles_kwargs(Plottable.plot_styles, kwargs_list)
+
+    @staticmethod
+    def _scatter_styles_kwargs(kwargs_list):
+        return Plottable._styles_kwargs(Plottable.scatter_styles, kwargs_list)
 
 
 class FigurePlotter(Plottable):
@@ -45,6 +76,13 @@ class FigurePlotter(Plottable):
 class Layer(Plottable):
     def __init__(self, **kwargs):
         super(Layer, self).__init__(**kwargs)
+        self.default_styles = {}
+
+    def plot_styles_kwargs(self, **kwargs):
+        return self._plot_styles_kwargs([self.default_styles, kwargs])
+
+    def scatter_styles_kwargs(self, **kwargs):
+        return self._scatter_styles_kwargs([self.default_styles, kwargs])
 
     def _plotonaxies(self, ax, **kwargs):
         pass
@@ -74,21 +112,32 @@ class CollectionPlotter(Layer):
         '-': lambda x, y: x - y,
         '+': lambda x, y: x + y,
     }
+    oper_reg = re.compile('\s*(\w+)\s*([+-])\s*(\w+)\s*')
+
     def __init__(self, collections, masks=None, **kwargs):
         super(CollectionPlotter, self).__init__(**kwargs)
         self.collections = collections
         self.masks = masks
+        self.default_styles['ls'] = 'None'
+        self.default_styles['marker'] = '.'
+        self.default_styles.update(self._plot_styles_kwargs([kwargs]))
+
 
     def __len__(self):
-        return len(self.collections.values()[0])
+        return len(list(self.collections.values())[0])
 
     def get_values(self, color):
         try:
-            if len(color) == 1:
+            m = self.oper_reg.match(color)
+            if not m:
                 return self.collections[color]
-            return self.operators[color[1]](self.collections[color[0]], self.collections[color[2]])
+            else:
+                a = m.groups()[0]
+                op = m.groups()[1]
+                b = m.groups()[2]
+                return self.operators[op](self.collections[a], self.collections[b])
         except (TypeError, IndexError, KeyError):
-            raise ValueError('color should be one or three letter string with operator eg. "V", "B-V"')
+            raise ValueError('"color" should be a band name or two color +/- operation, eg. "V", "B-V"')
 
     def get_masks(self, **kwargs):
         masks = kwargs.get('masks')
@@ -107,8 +156,9 @@ class CollectionPlotter(Layer):
         x = self.get_values(kwargs['xcolor'])
         y = self.get_values(kwargs['ycolor'])
         masks = self.get_masks(**kwargs)
+        styles = self.plot_styles_kwargs(**kwargs)
         for mask in masks:
-            ax.scatter(x[mask], y[mask])
+            ax.plot(x[mask], y[mask], **styles)
 
 
 class CompoundPlot(FigurePlotter):
@@ -158,16 +208,26 @@ class FilterColorPlotter(CompoundPlot):
 class JohnsonCousinsPlotter(FilterColorPlotter):
     default_limits = {
         'U': (20,5), 'V': (20,5), 'B': (20,5), 'R': (20,5), 'I': (20,5),
-        'U-B': (0,2.5), 'B-V': (0,2.5), 'V-I': (0,2.5), 'R-V': (0,2.5), 'R-I': (0,2.5),
+        'U-B': (0,2.5), 'B-V': (0,2.5), 'V-I': (0,3.5), 'V-R': (0,2.5), 'R-I': (0,2.5),
+        'U_e': (0, 0.3), 'B_e': (0, 0.3), 'V_e': (0, 0.3), 'R_e': (0, 0.3), 'I_e': (0, 0.3),
     }
     def __init__(self, U=None, B=None, V=None, R=None, I=None,
+                 U_e=None, B_e=None, V_e=None, R_e=None, I_e=None,
                  distance=None, age=None, Av=None, reddenings=None, **kwargs):
         collections = {c: v for c,v in zip('UVBRI', [U, V, B, R, I]) if v is not None}
+        for c in  'UVBRI':  # DiffPhots as arguments? extract mag and error
+            dp = collections.get(c)
+            if isinstance(dp, DiffPhot):
+                collections[c] = dp.mag
+                if dp.mag_e is not None:
+                    collections[c+'_e'] = dp.mag_e
+        errors = {c+'_e': v for c, v in zip('UVBRI', [U_e, V_e, B_e, R_e, I_e]) if v is not None}
+        collections.update(errors)
         super(JohnsonCousinsPlotter, self).__init__(
             distance, age, Av, reddenings, collections, limits=self.default_limits, **kwargs)
 
 
-class _DupaPlotter:
+class _TestPlotter:
     def color_mag_plot(ax, x, y, xcolor='B-V', ycolor='V', isochrone=None, sptypes=True, legend=None,
                        masks=[None], labels=None, colors=None, edgecolors=None, alphas=None, sizes=None,
                        xlim=None, ylim=None):

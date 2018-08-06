@@ -3,9 +3,9 @@ Changelog
 =========
 All notable changes to this project will be documented in this file.
 
-The format is inspired by [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
+Inspired by [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-[Unreleased]
+[0.7.1]
 ============
 Added
 -----
@@ -13,14 +13,23 @@ Added
 * `gapick`: extended filtering based on fitting err/mag relation from preliminary PSF astrometry - new options
 * `gapick`: cleaned up and extend logging
 * `gapick`: cleaned up `--help` output
+* `astwro.phot.PhotError`: exponent fitting and other improvements
+* `astwro.phot.plots`: Styles handling. General instrumentation, and specifically for `plot` and `scatter`
+* `astwro.phot.DiffPhot` class added, as beginning of object interface for differential photometry routines
 
 Changed
 -------
+* `astwro.phot.io`: renamed to `astwro.phot.lc_io`
 * `gapick`: Minimized function is now mean of errors weighted by flux w=100^(-mag/5)
 * `gapick`: by default (until `--include-psf`) PSF candidates are excluded from error evaluation
 * `gapick`: options with underscore changed, e.g. `--out_dir` to `--out-dir`
 * `gapick`: doesnt start without FITS file. For run on demo file, use new `--demo` option
+* requrements.txt and dependencies clean up.
+* `astwro.exttools.Runner`: error handling (when external tool hasn't generated expected output file) improved (a bit)
 
+Fixed
+-----
+* `grepfitshdr`: Crash when using `-f` option with numeric field
 
 [0.7.0] -
 =======

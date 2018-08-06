@@ -5,8 +5,9 @@ __metaclass__ = type
 
 from astwro.phot import *
 from os.path import join
-from astwro.phot.io import write_lc, write_lc_filters
+from astwro.phot.lc_io import write_lc, write_lc_filters
 from astwro.utils import TmpDir
+import numpy as np
 import sys
 
 
@@ -56,6 +57,24 @@ def test_real():
     d, e, f = prepare_testset_real()
     o, s, l, oe, se, le = dphot_filters(d, e, f)
     pass
+
+def test_masked_object():
+    d, e, c = prepare_testset_masked()
+    s, l, o, se, le, oe = dphot(d, e, c)
+    dp = DiffPhot(d, e, c)
+    assert  np.allclose(dp.mag, s)
+    assert  np.allclose(dp.lc, l)
+    assert  np.allclose(dp.obs_deltas, o)
+
+
+    e = dp.err
+    e2= e**2
+    d = dp.obs_deltas_stddev
+    d2 = d**2
+
+    x =  (dp.mag, dp.mag_v2, dp.lc_e)
+#    assert  np.allclose(dp.mag_e, se)
+
 
 
 def test_write_lc():

@@ -613,6 +613,7 @@ def __do(arg):
             checkpoint = dict(population=pop, generation=g, halloffame=hof, logbook=logbook)
             with open(os.path.join(result_dir, 'checkpoint.chk'), 'wb') as f:
                 pickle.dump(checkpoint, f)
+
         # end of evolution loop
 
     if result_dir:
@@ -644,8 +645,8 @@ def __arg_parser():
         description='Find best PSF stars using genetic algorithm running the daophot/allstar'
                     ' workflow for number of a PSF stars sets.'
                     ' Minimized function'
-                    ' is the mean of allstar\'s chi statistic calculated on '
-                    ' list of all stars. Results'
+                    ' is the mean of allstar\'s chi statistic, weighted by flux, calculated on '
+                    ' training subset of of all stars. Results'
                     ' are stored in --dir directory if provided. List of star ids'
                     ' of the best set found, is printed to stdout (until suppressed by -no_stdout)',
         epilog=commons.version_string(),

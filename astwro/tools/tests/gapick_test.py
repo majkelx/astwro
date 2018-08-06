@@ -16,6 +16,7 @@ def test_gapick_short():
         overwrite = True,
         out_dir = d.path,
         fine = False,
+        demo=True,
     )
     assert (r.stars_number() > 10)
 

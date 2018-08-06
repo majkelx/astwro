@@ -5,14 +5,172 @@
     Uses Honeycutt 1992PASP..104..435H. approach
 """
 from __future__ import absolute_import, division, print_function
+
 __metaclass__ = type
 
-from functools import partial
+#from functools import partial
 import numpy as np
 from astropy.stats import SigmaClip
+from cached_property import cached_property
 
 
-def dphot(data, stddevs, comp_stars_mask = None):
+class DiffPhot(object):
+    def __init__(self, data, err, comp_stars_mask=None, lazy=True):
+        super(DiffPhot, self).__init__()
+        self._data = data
+        self._err = err
+        self._mask_stars_comp = comp_stars_mask
+        if not lazy: # force evaluate solution
+            _ = self.solution
+
+    @property
+    def N(self):
+        """Number of stars. Size of mag or err vector"""
+        return self.data.shape[0]
+
+    @property
+    def M(self):
+        """Number of bins."""
+        return self.data.shape[1]
+
+    @cached_property
+    def data(self):
+        return np.ma.asanyarray(self._data)
+
+    @cached_property
+    def err(self):
+        return np.ma.asanyarray(self._err)
+
+    @cached_property
+    def weights(self):
+        w = self.err ** -2
+        return self.err ** -2
+
+    @cached_property
+    def lc(self):
+        return self.solution[1]
+
+    @cached_property
+    def lc_residuals(self):
+        """NxM residuals: $r_{ij} = l_{ij} - m_i$ where $l$ is light curve point, and $m$ is resulting star magnitude"""
+        return self.lc - self.mag[:, np.newaxis]
+
+    @cached_property
+    def lc_e(self):
+        """NxM sqrt( err^2 + obs_deltas^2 )"""
+        return np.sqrt(self.err**2 + self.obs_deltas_stddev**2)
+
+    @cached_property
+    def obs_deltas(self):
+        return self.solution[2]
+
+    @cached_property
+    def obs_deltas_stddev(self):
+        """std dev of observations deltas from residuals, weighted by err^-2"""
+        r2w = self.lc_residuals**2 * self.weights
+        sig2o = r2w.sum(axis=0) / self.weights.sum(axis=0) * r2w.count(axis=0) / (r2w.count(axis=0) - 1.0)
+        return np.ma.sqrt(sig2o)
+
+    @cached_property
+    def mag(self):
+        return self.solution[0]
+
+    @cached_property
+    def mag_v2(self):
+        WnClc = self.lc * self.weights
+        return WnClc.sum(axis=1) / self.weights.sum(axis=1)
+
+    @cached_property
+    def mag_e(self):
+        return (self.err ** -2).sum(axis=1) ** -0.5
+
+    @cached_property
+    def mag_chi(self):
+        return self._notimplemented
+
+    @cached_property
+    def mask_stars_comp(self):
+        if self._mask_stars_comp is None:
+            return np.ones(self.N, dtype=bool)
+        else:
+            return np.asanyarray(self._mask_stars_comp, dtype=bool)
+
+    @cached_property
+    def mask_stars_empty(self):
+        try:
+            return np.ma.getmask(self.data).all(axis=1)
+        except:  # nomask
+            return np.zeros(self.N, dtype=bool)
+
+    @cached_property
+    def mask_obs_empty(self):
+        try:
+            return np.ma.getmask(self.data).all(axis=0)
+        except:  # nomask
+            return np.zeros(self.M, dtype=bool)
+
+    @cached_property
+    def mask_obs_compempty(self):
+        try:
+            m = np.ma.getmask(self.data).copy()
+            m[~self.mask_stars_comp] = True  # mask all data for noncomparision stars
+            return m.all(axis=0)
+        except:  # nomask
+            return np.zeros(self.M, dtype=bool)
+
+    @cached_property
+    def solution(self):
+        data = self.data[:, ~self.mask_obs_compempty]
+        data_e = self.err[:, ~self.mask_obs_compempty]
+        weights = self.weights[:, ~self.mask_obs_compempty]
+        comp_stars_mask = self.mask_stars_comp & ~self.mask_stars_empty
+        # construct equations from comparision stars
+        K = data.shape[1]  # number of (nonempty) obs
+        D = data[comp_stars_mask]
+        W = weights[comp_stars_mask]
+        W.unshare_mask()
+        W[W.mask] = 0.0  # no more mask for bad values, just zero-weights
+        A00 = np.diag(W.sum(axis=0)[1:])
+        A11 = np.diag(W.sum(axis=1))
+        A10 = W[:, 1:]
+        A01 = A10.T
+        A = np.block([[A00, A01], [A10, A11]])
+        assert not (A00.diagonal() == 0.0).any(), "Bad obs: {}".format(np.argwhere(A00.diagonal() == 0.0))
+        assert not (A11.diagonal() == 0.0).any(), "Bad star: {}".format(np.argwhere(A11.diagonal() == 0.0))
+        WD = W * D.filled(0)
+        B1 = WD.sum(axis=0, keepdims=True).T[1:]
+        B2 = WD.sum(axis=1, keepdims=True)
+        B = np.block([[B1], [B2]])
+        X = np.vstack([np.zeros((1, 1)), np.linalg.solve(A, B)])  # obs[0] set to 0, excluded from equations
+        O = X.squeeze()[:K]
+        C = X.squeeze()[K:]
+        # light curves calculation
+        lc = data - O
+
+        # add non-comparision (nC) stars
+        S = np.ma.masked_all(self.N)
+        S[comp_stars_mask] = C
+        nC_mask = ~self.mask_stars_comp & ~self.mask_stars_empty
+        WnC = weights[nC_mask]
+        WnClc = lc[nC_mask] * WnC
+        S[nC_mask] = WnClc.sum(axis=1) / WnC.sum(axis=1)
+
+        # recreate masked fields (columns) for empty obs (observations without comaprision stars) in O and lc
+        if self.mask_obs_compempty.any():
+            nO = np.ma.masked_all(self.M)
+            nO[~self.mask_obs_compempty] = O
+            O = nO
+            nlc = np.ma.masked_all(shape=(self.N, self.M))
+            nlc[:, ~self.mask_obs_compempty] = lc
+            lc = nlc
+        return S, lc, O
+
+    @property
+    def _notimplemented(self):
+        raise NotImplementedError('Not implemented yet')
+
+
+def dphot(data, stddevs, comp_stars_mask=None):
     """
     Calculates differential photometry as in Honeycutt 1992PASP..104..435H.
 
@@ -87,22 +245,22 @@ def dphot(data, stddevs, comp_stars_mask = None):
     else:
         m = np.ma.getmask(data)
         assert np.array_equal(m, stddevs.mask), "data and stddev masks must be the same"
-        if m is not np.ma.nomask: # masked data provided, search for empty obs and stars
+        if m is not np.ma.nomask:  # masked data provided, search for empty obs and stars
             empty_obs = m.all(axis=0)
             empty_str = m.all(axis=1)
-            data    = data   [:, ~empty_obs]
+            data = data[:, ~empty_obs]
             stddevs = stddevs[:, ~empty_obs]
             comp_stars_mask &= ~empty_str
     # construct equations from comparision stars
-    K = data.shape[1] # number of (nonempty) obs
+    K = data.shape[1]  # number of (nonempty) obs
     D = data[comp_stars_mask]
     Wall = stddevs ** -2
     W = Wall[comp_stars_mask]
     W.unshare_mask()
-    W[W.mask] = 0.0 # no more mask for bad values, just zero-weights
+    W[W.mask] = 0.0  # no more mask for bad values, just zero-weights
     A00 = np.diag(W.sum(axis=0)[1:])
     A11 = np.diag(W.sum(axis=1))
-    A10 = W[:,1:]
+    A10 = W[:, 1:]
     A01 = A10.T
     A = np.block([[A00, A01], [A10, A11]])
     assert not (A00.diagonal() == 0.0).any(), "Bad obs: {}".format(np.argwhere(A00.diagonal() == 0.0))
@@ -110,30 +268,31 @@ def dphot(data, stddevs, comp_stars_mask = None):
     WD = W * D.filled(0)
     B1 = WD.sum(axis=0, keepdims=True).T[1:]
     B2 = WD.sum(axis=1, keepdims=True)
-    B = np.block([[B1],[B2]])
-    X = np.vstack([ np.zeros((1,1)), np.linalg.solve(A, B)])  # obs[0] set to 0, excluded from equations
+    B = np.block([[B1], [B2]])
+    X = np.vstack([np.zeros((1, 1)), np.linalg.solve(A, B)])  # obs[0] set to 0, excluded from equations
     O = X.squeeze()[:K]
     C = X.squeeze()[K:]
     # light curves calculation
     lc = data - O
+
     # add non-comparision stars
     S = np.ma.masked_all(empty_str.size)
     S[comp_stars_mask] = C
     nC_mask = ~comp_stars_mask & ~empty_str
     WnC = Wall[nC_mask]
     WnClc = lc[nC_mask] * WnC
-    S[nC_mask] = WnClc.sum(axis=1)/WnC.sum(axis=1)
+    S[nC_mask] = WnClc.sum(axis=1) / WnC.sum(axis=1)
 
     # weighted variance calculation
-    resid = lc - S.reshape(S.size,1)
-    r2w = resid**2 * Wall
+    resid = lc - S.reshape(S.size, 1)
+    r2w = resid ** 2 * Wall
     # sig2(obs) from comparision only
     sig2o = r2w[comp_stars_mask].sum(axis=0) / W.sum(axis=0) * C.size / (C.size - 1.0)
     # sig2(stars) for all (nonempty)
     sig2s = r2w.sum(axis=1) / Wall.sum(axis=1) * O.size / (O.size - 1.0)
     # sig2(lc)
-    sig2mean = sig2o / data.mask.sum(axis=0)  #sig2(obs) / num of stars in obs
-    sig2lc = stddevs**2 + sig2mean
+    sig2mean = sig2o / data.mask.sum(axis=0)  # sig2(obs) / num of stars in obs
+    sig2lc = stddevs ** 2 + sig2mean
 
     if empty_obs is not None:  # recreate masked fields (columns) for empty obs
         nO = np.ma.masked_all(empty_obs.size)
@@ -152,7 +311,7 @@ def dphot(data, stddevs, comp_stars_mask = None):
     return S, lc, O, np.ma.sqrt(sig2s), np.ma.sqrt(sig2lc), np.ma.sqrt(sig2o)
 
 
-def dphot_filters(data, stddevs, filters_masks, comp_stars_mask = None):
+def dphot_filters(data, stddevs, filters_masks, comp_stars_mask=None):
     """ Calculates differential photometry as in Honeycutt 1992PASP..104..435H, for sets of observations
      The ``filters_masks`` parameter should be a list of boolean masks choosing subsets of K observations
      e.g. for different filters. Differential photometry will be calculated for each set independently by
@@ -188,23 +347,25 @@ def dphot_filters(data, stddevs, filters_masks, comp_stars_mask = None):
     else:
         cmasks = [comp_stars_mask] * filters_masks.shape[0]
 
-
-    O    = np.ma.masked_all(data.shape[1])
+    O = np.ma.masked_all(data.shape[1])
     sigO = np.ma.masked_all(data.shape[1])
-    S    = []
+    S = []
     sigS = []
-    L    = np.ma.masked_all(data.shape)
+    L = np.ma.masked_all(data.shape)
     sigL = np.ma.masked_all(data.shape)
 
     for i, mask in enumerate(filters_masks):
         vS, lc, vO, sS, slc, sO = dphot(data[:, mask], stddevs[:, mask], cmasks[i])
-        O[mask] = vO    ; sigO[mask] = sO
-        S.append(vS)    ; sigS.append(sS)
-        L[:, mask] = lc ; sigL[:, mask] = slc
+        O[mask] = vO
+        sigO[mask] = sO
+        S.append(vS)
+        sigS.append(sS)
+        L[:, mask] = lc
+        sigL[:, mask] = slc
     return np.ma.array(S), L, O, np.ma.array(sigS), sigL, sigO
 
 
-def mean_phot(lc, lc_stddev, lc_clip_sigma = 1.0, stdev_clip_sigma = 1.7, lc_clip_iters=2, stdev_clip_iter=2):
+def mean_phot(lc, lc_stddev, lc_clip_sigma=1.0, stdev_clip_sigma=1.7, lc_clip_iters=2, stdev_clip_iter=2):
     """ Calculates stars mean magnitude and error from light curves
 
      Calculates stars mean magnitude with standard deviation from light curves using:
@@ -217,7 +378,7 @@ def mean_phot(lc, lc_stddev, lc_clip_sigma = 1.0, stdev_clip_sigma = 1.7, lc_cli
     p = np.ma.array(lc, copy=True)
     pe = np.ma.array(lc_stddev, copy=True)
 
-    lc_clip = SigmaClip(sigma=lc_clip_sigma, iters=lc_clip_iters)#, cenfunc=partial(np.ma.average, weights=pe**-1))
+    lc_clip = SigmaClip(sigma=lc_clip_sigma, iters=lc_clip_iters)  # , cenfunc=partial(np.ma.average, weights=pe**-1))
     err_clip = SigmaClip(sigma_lower=10.0, sigma_upper=stdev_clip_sigma, iters=stdev_clip_iter)
     pmask1 = err_clip(pe, axis=1, copy=False).mask
     pmask2 = pmask1 | lc_clip(p, axis=1, copy=False).mask
@@ -228,5 +389,4 @@ def mean_phot(lc, lc_stddev, lc_clip_sigma = 1.0, stdev_clip_sigma = 1.7, lc_cli
     mean = np.ma.average(p, axis=1, weights=pw)
     resid = lc - mean[:, np.newaxis]
     stddev = np.ma.sqrt(np.ma.average(resid ** 2, axis=1))  # , weights=pw)
-    return  mean, stddev
-
+    return mean, stddev

@@ -11,7 +11,7 @@ from astropy.modeling import models, fitting
 from astropy.stats import sigma_clipped_stats, sigma_clip
 
 from astwro.exttools import Runner
-from astwro.phot.io import write_lc, write_lc_filters
+from astwro.phot.lc_io import write_lc, write_lc_filters
 
 class LCFitter(object):
     """

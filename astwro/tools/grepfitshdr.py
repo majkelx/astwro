@@ -64,7 +64,7 @@ def grep(pattern, filenames, output=stdout, invert=False, withfile=False, fileon
         # rep = repr(h).strip()
         # for line in rep.splitlines():
         for line in iter_fields(h, onlyvalues=onlyvalues, fields=fields):
-            match = regexp.search(line)
+            match = regexp.search(str(line))
             if invert:
                 match = not match
             scanned += 1
@@ -108,7 +108,7 @@ def __arg_parser():
                         help='print filenames with matches only')
     parser.add_argument('-f', action='append', metavar='FIELD',
                         help='matches only specified FIELD\'s value; can be provided multiple '
-                             'times to match several fields; -f* limits search to values but searches'
+                             'times to match several fields; -f* limits search to values but searches '
                              'in all fields')
     return parser
 

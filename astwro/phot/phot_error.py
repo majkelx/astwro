@@ -30,6 +30,16 @@ class PhotError(object):
         self.fitplussigma = fitplussigma
 
     @cached_property
+    def N(self):
+        """Number of stars. Size of mag or err vector"""
+        return len(self.mag)
+
+    @cached_property
+    def M(self):
+        """Number of bins."""
+        return len(self.mag_bin_counts)
+
+    @cached_property
     def mag(self):
         return np.asanyarray(self._mag)
 
@@ -38,44 +48,54 @@ class PhotError(object):
         return np.asanyarray(self._err)
 
     @cached_property
-    def sorted_idx(self):
+    def mag_idx_sorted(self):
+        """Index sorting mag or err by mag. Size: N"""
         return np.argsort(self.mag)
 
     @cached_property
     def mag_sorted(self):
-        return self.mag[self.sorted_idx]
+        """mag sorted. Size: N"""
+        return self.mag[self.mag_idx_sorted]
 
     @cached_property
     def err_sorted(self):
-        return self.err[self.sorted_idx]
+        """err sorted by magnitude. Size: N"""
+        return self.err[self.mag_idx_sorted]
 
     @cached_property
-    def histogram(self):
+    def mag_histogram(self):
+        """magnitude histogram: Pair: (values size M, edges size M+1)"""
         v, r = np.histogram(self.mag_sorted, bins=self.bins)
         return v, r
 
     @cached_property
-    def hist_counts(self):
-        return self.histogram[0]
+    def mag_bin_counts(self):
+        """Size: M"""
+        return self.mag_histogram[0]
 
     @cached_property
-    def err_clipped_counts(self):
-        return np.array([len(e) for e in self.err_clipped], dtype=int)
+    def mag_bin_edges(self):
+        """Magnitudes of histogram bins edged. Size: M+1"""
+        return self.mag_histogram[1]
 
     @cached_property
-    def hist_edges(self):
-        return self.histogram[1]
-
-
-    @cached_property
-    def binning(self):
-        divs = np.searchsorted(self.mag_sorted, self.hist_edges[1:-1])
+    def mag_bin_idx(self):
+        """Indexes of magnitude histogram bins edged. Size: M+1"""
+        divs = np.searchsorted(self.mag_sorted, self.mag_bin_edges[1:-1])
         return np.concatenate(([0], divs, [len(self.mag_sorted)]))
 
     @cached_property
-    def hist_idx_ranges(self):
-#        return zip(self.binning, self.binning[1:])
-        return list(zip(self.binning, self.binning[1:]))
+    def mag_bin_idx_ranges(self):
+        """Indexes ranges for bins of magnitude histogram. Size: M list of pairs"""
+        #        return zip(self.mag_bin_idx, self.mag_bin_idx[1:])
+        return list(zip(self.mag_bin_idx, self.mag_bin_idx[1:]))
+
+    @cached_property
+    def err_bin(self):
+        return np.array([self.err_sorted[rlo:rhi] for rlo,rhi in self.mag_bin_idx_ranges])
+
+
+
 
 
     @cached_property
@@ -83,7 +103,7 @@ class PhotError(object):
         mask = np.ones_like(self.mag, dtype=bool)
         i = 0
         if self.sigma_clip:
-            for rlo, rhi in self.hist_idx_ranges:
+            for rlo, rhi in self.mag_bin_idx_ranges:
                 errors = self.err_sorted[rlo:rhi]
                 if len(self.err_sorted[rlo:rhi]) > 2: # no sigmaclip for 0,1,2 element sets
                     _, elo, ehi = sigmaclip(self.err_sorted[rlo:rhi])
@@ -92,19 +112,20 @@ class PhotError(object):
                 i += 1
         return mask
 
-    @cached_property
-    def err_binned(self):
-        return np.array([self.err_sorted[rlo:rhi] for rlo,rhi in self.hist_idx_ranges])
 
     @cached_property
     def err_clipped(self):
-        return np.array([self.err_sorted[rlo:rhi][self.clipping[rlo:rhi]] for rlo,rhi in self.hist_idx_ranges])
+        return np.array([self.err_sorted[rlo:rhi][self.clipping[rlo:rhi]] for rlo,rhi in self.mag_bin_idx_ranges])
+    @cached_property
+
+    def err_clipped_counts(self):
+        return np.array([len(e) for e in self.err_clipped], dtype=int)
 
     @cached_property
     def mag_clipped(self):
-#        for rlo,rhi in self.hist_idx_ranges: #DEL
+#        for rlo,rhi in self.mag_bin_idx_ranges: #DEL
 #            print(rlo, rhi, len(self.mag_sorted[rlo:rhi][self.clipping[rlo:rhi]]) )
-        return np.array([self.mag_sorted[rlo:rhi][self.clipping[rlo:rhi]] for rlo,rhi in self.hist_idx_ranges])
+        return np.array([self.mag_sorted[rlo:rhi][self.clipping[rlo:rhi]] for rlo,rhi in self.mag_bin_idx_ranges])
 
     @cached_property
     def err_means(self):
@@ -199,6 +220,12 @@ class PhotError(object):
     @cached_property
     def filtered_by_sigma_from_means(self):
         return self._filter(self.err_fitted)
+
+    @cached_property
+    def err_weighted_mean(self):
+        """Weighted by flux mean of err, float"""
+        w = 100 * (-self.mag / 5)
+        return (self.err * w).sum() / w.sum()
 
     def _filter(self, err_bin_values):
 
