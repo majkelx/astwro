@@ -114,30 +114,30 @@ class DAO(object):
     # lookup for column:str (column definition shared by file types), eventually for '_default'
 
     _static_columns = {
-        '_default':     CType('_default', '{:9.3f}', [-9.999]),
-        'id':           CType('id', '{:7.0f}', [0]),
-        ('.als','mag'): CType('mag', '{:9.4f}', [99.999]),
-        ('.als','mag_err'):   CType('mag_err', '{:9.4f}', [9.9999], default=0.0),
-        ('.sky','mag'): CType('mag', '{:9.4f}', [99.999]),
-        ('.sky','mag_err'):   CType('mag_err', '{:9.4f}', [9.9999], default=0.0),
-        'iter':         CType('iter', '{:8.0f}.', [-9.999], default=0.0),
-        'chi':          CType('chi', '{:9.3f}', [-9.999], default=0.0),
-        'sharp':        CType('sharp', '{:9.3f}', [-9.999], default=0.0),
-        'sky':          CType('sky', '{:10.3f}', [-9.999]),
-        'sky_err':      CType('sky_err', '{:6.2f}', [-9.99, -9999.0], default=0),
-        'sky_skew':     CType('sky_skew', '{:6.2f}', [-9.99], default=0),
+        '_default':     CType('_default', ' {:8.3f}', [-9.999]),
+        'id':           CType('id', ' {:6.0f}', [0]),
+        ('.als','mag'): CType('mag', ' {:8.4f}', [99.999]),
+        ('.als','mag_err'):   CType('mag_err', ' {:8.4f}', [9.9999], default=0.0),
+        ('.sky','mag'): CType('mag', '{:8.4f}', [99.999]),
+        ('.sky','mag_err'):   CType('mag_err', ' {:8.4f}', [9.9999], default=0.0),
+        'iter':         CType('iter', ' {:7.0f}.', [-9.999], default=0.0),
+        'chi':          CType('chi', ' {:8.3f}', [-9.999], default=0.0),
+        'sharp':        CType('sharp', ' {:8.3f}', [-9.999], default=0.0),
+        'sky':          CType('sky', ' {:9.3f}', [-9.999]),
+        'sky_err':      CType('sky_err', ' {:5.2f}', [-9.99, -9999.0], default=0),
+        'sky_skew':     CType('sky_skew', ' {:5.2f}', [-9.99], default=0),
         'ra':           CType('ra', ' {:s}', [], default='00:00:00.0000'),
         'dec':          CType('dec', ' {:s}', [], default='+00:00:00.000'),
-        ('.ap','mag'):  CType('mag', '{:9.3f}', [99.999,-99.999,94.999, 98.999]),
-        ('.ap','mag_err'):   CType('mag_err', '{:8.4f}', [9.9999], default=0.0),
+        ('.ap','mag'):  CType('mag', ' {:8.3f}', [99.999,-99.999,94.999, 98.999]),
+        ('.ap','mag_err'):   CType('mag_err', ' {:8.4f}', [9.9999], default=0.0),
         ('.ap', 'id'):  CType('id', '\n{:7.0f}', [0]),         # new linie in AP files
         ('.ap', 'sky'): CType('sky', '\n{:14.3f}', [-9.999,0]),  # new linie in AP files
     }
 
 # add A2, A3,... and A2_err, A3_err,...
-DAO._apert_columns = dict([(col, DAO.CType(col, '{:9.3f}', [99.999,-99.999,94.999], optional=True))
+DAO._apert_columns = dict([(col, DAO.CType(col, ' {:8.3f}', [99.999,-99.999,94.999], optional=True))
                        for col in ('A{:X}'.format(i) for i in range(2,13))])
-DAO._ap_err_columns = dict([(col, DAO.CType(col, '{:8.4f}', [9.9999], optional=True))
+DAO._ap_err_columns = dict([(col, DAO.CType(col, ' {:7.4f}', [9.9999], optional=True))
                         for col in ('A{:X}_err'.format(i) for i in range(2,13))])
 # dict union
 DAO.columns = dict(chain.from_iterable(d.items() for d in (DAO._static_columns, DAO._apert_columns, DAO._ap_err_columns)))
