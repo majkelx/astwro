@@ -323,20 +323,14 @@ class Daophot(DAORunner):
         .. seealso::  :meth:`NEda`
         """
         # TODO: When PSF file is found, new daophot uses it and behaves differently,
-        # TODO: this should be implemented as an optional parameter,
+        # TODO: this should avoided, (there is NEda for that),
         # TODO: and not using same name for FITS and PSF by default (avoid finding PSF)
         # TODO: session:
         #           Found PSF file mik.psf
         #       Profile-fitting photometry (default mik.nst): mik.als
         #                     Star ID file (default mik.lst): mik.coo
         #                       Output file (default mik.ap): mik2.ap
-        if photoopt is None and (apertures is None or IS==0 or OS==0):
-            raise Daophot.RunnerValueError('Apertures and IS and OS must be provided, explicitly or as photoopt file',
-                                           self)
-        if apertures is None:
-            apertures = []
-        elif len(apertures) > 12:
-            raise Daophot.RunnerValueError('apertures apertures list can contain maximum 12 elements', self)
+        apertures = self._check_apertures(IS, OS, apertures, photoopt)
         self._get_ready_for_commands()  # wait for completion before changes in working dir
 
         l_popt, a_popt = self._prepare_input_file(photoopt)
@@ -519,28 +513,23 @@ class Daophot(DAORunner):
              psf_file='i.psf', psf_photometry='i.als', stars_id='i.als', neda_photometry_file='i.nap'):
         # type: ([str], float, float, [list], [str], [str,sl.StarList], [str,sl.StarList], [str]) -> DpOp_NEda
         """
-        Runs (or adds to execution queue in batch mode) daophot NEDA command. 
-        
+        Runs (or adds to execution queue in batch mode) daophot NEDA command.
+
+        Performing aperture photometry with neighbours SPF profiles subtraction.
         Either :param photoopt or :param photo_is, :param OS and :param photo_ap have to be set.
         :param [str] photoopt: photo.opt file to be used, default: none 
                     (provide :param photo_is, :param OS and :param photo_ap)
         :param float IS: inner sky radius, overwrites :param photoopt file value IS
         :param float OS: outer sky radius, overwrites :param photoopt file value OS
         :param [list] apertures: apertures radius, up to 12, overwrites `photoopt` file values A1, A2, ...            
-        :param str psf_file: file with PSF
-        :param [str, sl.StarList] psf_photometry: stars with PSF photometry, default: i.als 
-        :param [str, sl.StarList] stars_id: input list of stars, default: i.als
-        :param str neda_photometry_file: output neda photometry file 
+        :param str psf_file: file with PSF for profile subtraction
+        :param [str, sl.StarList] psf_photometry: stars with PSF photometry for profile subtraction, default: i.als
+        :param [str, sl.StarList] stars_id: input list of stars to be measured, default: i.als
+        :param str neda_photometry_file: output neda aperture photometry file
         :return: results object, also accessible as `NEda_result` property
         :rtype: DpOp_NEda
         """
-        if photoopt is None and (apertures is None or IS==0 or OS==0):
-            raise Daophot.RunnerValueError('Apertures and IS and OS must be provided, explicitly or as photoopt file',
-                                           self)
-        if apertures is None:
-            apertures = []
-        elif len(apertures) > 12:
-            raise Daophot.RunnerValueError('apertures apertures list can contain maximum 12 elements', self)
+        apertures = self._check_apertures(IS, OS, apertures, photoopt)
         self._get_ready_for_commands()  # wait for completion before changes in working dir
 
         l_popt, a_popt = self._prepare_input_file(photoopt)
@@ -570,6 +559,16 @@ class Daophot(DAORunner):
             self.run()
         return processor
 
+    def _check_apertures(self, IS, OS, apertures, photoopt):
+        if photoopt is None and (apertures is None or IS == 0 or OS == 0):
+            raise Daophot.RunnerValueError('Apertures and IS and OS must be provided, explicitly or as photoopt file',
+                                           self)
+        if apertures is None:
+            apertures = []
+        elif len(apertures) > 12:
+            raise Daophot.RunnerValueError('apertures apertures list can contain maximum 12 elements', self)
+        return apertures
+
     def _process_starlist(self, s, **kwargs):
         if kwargs['add_psf_errors']:
             import pandas as pd
@@ -581,3 +580,52 @@ class Daophot(DAORunner):
             new.import_metadata(s)
             s = new
         return s
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
