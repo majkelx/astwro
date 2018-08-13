@@ -1,6 +1,7 @@
 from .StarList import StarList
 from .file_helpers import *
 from .daofiles import parse_dao_hdr, write_dao_header, DAO_file_firstline, DAO
+from .file_helpers import as_starlist
 import pandas as pd
 import re
 
@@ -136,9 +137,14 @@ def write_ds9_regions(starlist, filename,
     if WCS:
         xcol = 'ra'
         ycol = 'dec'
+        starlist = as_starlist(starlist)
     else:
         xcol = 'x'
         ycol = 'y'
+        starlist = as_starlist(starlist, updateskycoord=False)
+    try: (starlist[xcol], starlist[ycol])
+    except KeyError as e:
+        raise KeyError('No coordinate columns ({},{}) in starlist. Check WCS parameter also'.format(xcol, ycol))
     f, to_close = get_stream(filename, 'w')
     f.write('# Region file format: DS9 version 4.0\n')
     if starlist.DAO_hdr is not None:

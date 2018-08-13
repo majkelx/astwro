@@ -44,7 +44,7 @@ def read_dao_file(file, dao_type = None):
     return ret
 
 
-def write_dao_file(starlist, file, dao_type=None, with_header=True):
+def write_dao_file(starlist, file, dao_type=None, with_header=None):
     """
     Write StarList object into daophot  file.
     :param starlist: StarList instance to be writen
@@ -57,6 +57,7 @@ def write_dao_file(starlist, file, dao_type=None, with_header=True):
                     - DAO.ALS_FILE
                 If missing extension of file will be used to determine file type
                 if file is provided as filename
+    :param with_header: True, False or None. If None header will be written if not None in starlist
     :rtype: None
     """
     if dao_type is None:
@@ -79,14 +80,14 @@ def _get_col_type(file_ext, column):
     return coltype
 
 
-def _write_file(starlist, file, dao_type, with_header=True):
+def _write_file(starlist, file, dao_type, with_header=None):
     f, to_close = get_stream(file, 'w')
-    if with_header:
+    if with_header != False:
         if starlist.DAO_hdr is not None:
             starlist.DAO_hdr['NL'] = dao_type.NL
             write_dao_header(starlist.DAO_hdr, f)
             f.write('\n')
-        else:
+        elif with_header:
             raise Exception('Attempt to save dao file with header from StarList with DAO_hdr=None')
     _write_table(starlist, f, dao_type)
     close_files(to_close)

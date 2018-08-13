@@ -23,7 +23,7 @@
         astwro/version.py
         docs/conf.py
         CHANGELOG.txt
-    * run tests
+    * run tests (for python 2 and python 3 - pyenv shell)
         pytest
     * commit to git
     * create git tag

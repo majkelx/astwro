@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 
 Inspired by [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+[Unreleased]
+============
+Added
+-----
+* `astwro.starlist.write_ds9_regions`: accepts astropy.table.Table` as input
+
+Changed
+-------
+* `astwro.pydaophot.Allstar.ALlstar`: `stars` parameter can be `StarList` without DAOType
+* `astwro.starlist.write_dao_file`: parameter `with_header=None` by default. Means that header will be written if in `starlist`
+* `astwro.starlist.Starlist`: `id` column/index correction when constructing from pandas or astropy `Table`
+* `astwro.starlist.Starlist`: ra/dec columns detection an conversion when constructing from pandas or astropy `Table`
+
+Fixed
+-----
+* `astwro.starlist.write_dao_file`: Files in DAOPHOT written in various places could have glued vaues belonging to differen column (no space)
+* `astwro.pydaophot` input file type detection, for input files in daophot/allstar, improved
+
+
+
 [0.7.1]
 ============
 Added

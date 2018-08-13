@@ -8,6 +8,14 @@ import astwro.starlist as sl
 import astwro.sampledata as data
 from astwro.utils import tmpdir
 
+def get_catalog(object):
+    from astroquery.vizier import Vizier
+    viz = Vizier( columns=['Star', '*'])
+    star = object.replace('_', ' ') + '*'
+    try:
+        return viz.query_constraints(catalog='II/183A/table2',Star=star)[0]
+    except IndexError:
+        return None
 
 def test_read_write_ds9():
     s1 = sl.read_dao_file(data.ap_file())
@@ -71,3 +79,13 @@ circle(21:45:46.9471,+65:45:43.794,2.275") # color=#38ACFB text={9} id=9
     assert s.dec[1] == '+65:45:56.751'
     assert s.auto_id.any()
     assert not s.auto_id.all()
+
+def test_write_wizir_catalog():
+    d = tmpdir()
+    fpath = path.join(d.path, 'mark_a.reg')
+    std_catalog = get_catalog('MARK_A')
+    sl.write_ds9_regions(std_catalog, fpath, WCS=True)
+    cat = sl.read_ds9_regions(fpath)
+    assert len(cat) == len(std_catalog)
+
+

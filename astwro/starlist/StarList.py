@@ -64,6 +64,20 @@ class StarList(pd.DataFrame):
         self['id'] = range(start, self.stars_number() + start)
         self.index = self.id
 
+    def refresh_id(self):
+        """Cheks for id column existence and renumber if needed then recreate index basin on id
+
+            If `id` column exist but cannot be casted to `int` (by `pandas.Series.to_numeric`),
+            `ValueError` exception is raised
+        """
+        try:
+            if self['id'].dtype != int:
+                self['id'] = pd.to_numeric(self['id'], downcast='integer', errors='raise')
+        except KeyError:
+            self.renumber()
+        self.index = self['id']
+
+
     def to_table(self):
         """
         Return a :class:`astropy.table.Table` instance
@@ -89,16 +103,8 @@ class StarList(pd.DataFrame):
         sl : `StarList`
             A `StarList`instance
         """
-        sl = StarList(table.to_pandas())
-        sl.DAO_type = table.meta.get('DAO_type')
-        dao_hdr = {}
-        for key in ['NL', 'NX', 'NY', 'LOWBAD', 'HIGHBAD', 'THRESH', 'AP1', 'PH/ADU', 'RNOISE', 'FRAD']:
-            v = table.meta.get(key)
-            if v is not None:
-                dao_hdr[key] = v
-        if len(dao_hdr) > 0:
-            sl.DAO_hdr = dao_hdr
-        return sl
+        from .file_helpers import as_starlist
+        return as_starlist(table)
 
     @classmethod
     def from_skycoord(cls, coo):
@@ -115,11 +121,16 @@ class StarList(pd.DataFrame):
             A `StarList`instance
         """
         sl = StarList(
-            np.array([coo.ra.to_string(sep=':', unit=u.hourangle), coo.dec.to_string(sep=':', unit=u.deg)]).T,
+            np.array([coo.ra.to_string(sep=':', unit=u.hourangle, pad=True),
+                      coo.dec.to_string(sep=':', unit=u.deg, pad=True, alwayssign=True)]).T,
                       columns=['ra', 'dec'])
         sl.DAO_type = DAO.RADEC_FILE
         sl.renumber()
         return sl
+
+    def radec_hmsdms_from_skycoord(self, coo):
+        self['ra'] =  coo.ra.to_string(sep=':', unit=u.hourangle, pad=True)
+        self['dec'] = coo.dec.to_string(sep=':', unit=u.deg, pad=True, alwayssign=True)
 
     def radec_deg_from_hmsdms(self):
         sky = SkyCoord(self.ra, self.dec, unit=(u.hourangle, u.deg))
