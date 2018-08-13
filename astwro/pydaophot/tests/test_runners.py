@@ -66,6 +66,21 @@ class TestRunners(unittest.TestCase):
         self.assertAlmostEqual(f.median, s.median)
         self.assertAlmostEqual(f.pixels, s.pixels)
 
+    def test_neda(self):
+        d = Daophot(image=self.image)
+        d.FInd(1, 1)
+        d.PHotometry(IS=35, OS=50, apertures=[8])
+        d.PIck()
+        psf_stars = d.PIck_result.picked_starlist
+        d.PSf()
+        a = Allstar(dir=d.dir, image=self.image)
+        a.ALlstar(stars='i.ap')
+        self.assertTrue(a.ALlstars_result.success)
+        d.NEda(IS=35, OS=50, apertures=[8,10,12.5],
+               stars_id=psf_stars[:10])
+        self.assertGreater(len(d.NEda_result.neda_starlist), 1)
+
+
 
 suite = unittest.TestLoader().loadTestsFromTestCase(TestRunners)
 if __name__ == '__main__':
