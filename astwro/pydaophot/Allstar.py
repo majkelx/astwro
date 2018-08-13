@@ -4,6 +4,7 @@ __metaclass__ = type
 from .DAORunner import DAORunner
 from .OutputProviders import *
 from astwro.config import find_opt_file
+import astwro.starlist
 
 
 class Allstar(DAORunner):
@@ -140,7 +141,7 @@ class Allstar(DAORunner):
 
         l_img, a_img = self._prepare_input_file(image_file)
         l_psf, a_psf = self._prepare_input_file(psf_file)
-        l_pht, a_pht = self._prepare_input_file(stars)
+        l_pht, a_pht = self._prepare_input_file(stars, astwro.starlist.DAO.XY_FILE)
         l_als, a_als = self._prepare_output_file(profile_photometry_file)
         l_sub, a_sub = self._prepare_output_file(subtracted_image_file)
 

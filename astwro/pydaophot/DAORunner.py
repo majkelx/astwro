@@ -79,11 +79,11 @@ class DAORunner(Runner):
         return filename
 
 
-    def _prepare_input_file(self, data):
+    def _prepare_input_file(self, data, default_dao_file_type=None):
         # check if input has a form of StarList
         if isinstance(data, sl.StarList):
-            #TODO: provide file types and/or extensions?
-            data = self.write_starlist(data)
+            dao_type = default_dao_file_type if data.DAO_type is None else data.DAO_type
+            data = self.write_starlist(data, dao_file_type=dao_type)
         return super(DAORunner, self)._prepare_input_file(data)
 
     def _process_starlist(self, s, **kwargs):
