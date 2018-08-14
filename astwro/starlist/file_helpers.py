@@ -81,11 +81,11 @@ def as_starlist(input, read_files=True, raise_exceptions=True, updateskycoord=Tr
     else:
         return None
 
-    # corect encoding, avoid bytes etc...
+    # bytes->string
     for col in input:
-        try:
+        if isinstance(input[col][0], bytes):
             input[col] = input[col].str.decode('utf-8')
-        except: pass
+
     # check id obligatory field/idx
     input.refresh_id()
     # check, update sky ra/dec coords
