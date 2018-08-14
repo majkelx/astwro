@@ -22,7 +22,7 @@
     * increase version if needed
         astwro/version.py
         docs/conf.py
-        CHANGELOG.txt
+        CHANGELOG.rst
     * run tests (for python 2 and python 3 - pyenv shell)
         pytest
     * commit to git
@@ -31,8 +31,8 @@
     * /push to github
     * build distribution
        $ python setup.py bdist_wheel
-    * upload distribution, select newlly build:
+    * upload distribution, select newly build:
        $ twine upload dist/astwro-0.5.3-py2-none-any.whl
        problems? check:  ~/.pypirc, https://packaging.python.org/guides/migrating-to-pypi-org/#uploading
-    * incrase version! Let everythin new in github has new version after release.
+    * increase version! Let everything new in github has new version after release.
 
