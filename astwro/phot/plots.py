@@ -13,6 +13,7 @@ class Plottable(object):
     plot_styles =    ['alpha', 'ls', 'linestyle', 'c', 'color', 'lw', 'linewidth',
                       'marker', 'mec', 'mew', 'mfc', 'ms', 'zorder', 'label']
     scatter_styles = ['alpha', 'c', 's', 'marker', 'edgecolors', 'label']
+    (tool_plot, tool_errorbar, tool_scatter) = (1,2,3)
     def __init__(self, **kwargs):
         super(Plottable, self).__init__()
         _kwargs = kwargs
@@ -94,34 +95,37 @@ class ShiftedLayer(Layer):
         self.dy = dy
 
 
-class IsochromePlotter(ShiftedLayer):
+class IsochromeLayer(ShiftedLayer):
     def __init__(self, bands, age, Av, distance, feh=0.001, maxm=18.25, **kwargs):
-        super(IsochromePlotter, self).__init__(**kwargs)
+        super(IsochromeLayer, self).__init__(**kwargs)
         from isochrones.mist import MIST_Isochrone
         MIST = MIST_Isochrone(bands)
         iso  = MIST.isochrone(age=np.log10(age), feh=feh, AV=Av, distance=distance, maxm=maxm)
 
     def _plotonaxies(self, ax, **kwargs):
-        super(IsochromePlotter, self)._plotonaxies(ax, **kwargs)
+        super(IsochromeLayer, self)._plotonaxies(ax, **kwargs)
 
 
 
 
-class CollectionPlotter(Layer):
+class CollectionLayer(Layer):
     operators = {
         '-': lambda x, y: x - y,
         '+': lambda x, y: x + y,
     }
     oper_reg = re.compile('\s*(\w+)\s*([+-])\s*(\w+)\s*')
 
-    def __init__(self, collections, masks=None, **kwargs):
-        super(CollectionPlotter, self).__init__(**kwargs)
+    def __init__(self, collections, masks=None, tool=Plottable.tool_plot, colors=None, sizes=None, subsets=None, **kwargs):
+        super(CollectionLayer, self).__init__(**kwargs)
         self.collections = collections
         self.masks = masks
         self.default_styles['ls'] = 'None'
         self.default_styles['marker'] = '.'
         self.default_styles.update(self._plot_styles_kwargs([kwargs]))
-
+        self.tool = tool
+        self.colors = colors
+        self.sizes = sizes
+        self.subsets = subsets
 
     def __len__(self):
         return len(list(self.collections.values())[0])
@@ -152,13 +156,31 @@ class CollectionPlotter(Layer):
         return masks
 
     def _plotonaxies(self, ax, **kwargs):
-        super(CollectionPlotter, self)._plotonaxies(ax, **kwargs)
+        super(CollectionLayer, self)._plotonaxies(ax, **kwargs)
         x = self.get_values(kwargs['xcolor'])
         y = self.get_values(kwargs['ycolor'])
         masks = self.get_masks(**kwargs)
-        styles = self.plot_styles_kwargs(**kwargs)
-        for mask in masks:
-            ax.plot(x[mask], y[mask], **styles)
+        if self.tool == self.tool_plot:
+            styles = self.plot_styles_kwargs(**kwargs)
+            for mask in masks:
+                ax.plot(x[mask], y[mask], **styles)
+        elif self.tool == self.tool_scatter:
+            styles = self.scatter_styles_kwargs(**kwargs)
+            if self.colors:
+                if self.colors == True: # just bool, cycle std cycler over subsets
+                    assert len(self.subsets) == len(x), 'If `colors == True` for scatter, `subsets` of size of data should be specified'
+                    palette = self.get_scatter_cycle_palette()
+                    N = len(palette)
+                    c = [palette[i%N] for i in self.subsets]
+                else:
+                    c = self.colors
+                styles['c'] = c
+            if self.sizes:
+                styles['s'] = self.sizes
+            for mask in masks:
+                ax.scatter(x[mask], y[mask], **styles)
+
+    def get_scatter_cycle_palette(self): return ['C'+l for l in ['0123456789']]
 
 
 class CompoundPlot(FigurePlotter):
@@ -175,8 +197,8 @@ class CompoundPlot(FigurePlotter):
 class FilterColorPlotter(CompoundPlot):
     def __init__(self, distance=10, age=0, Av=None, reddenings=None,
                  collections=None, limits=None, **kwargs):
-        lstars = CollectionPlotter(collections, **kwargs)
-        super(FilterColorPlotter, self).__init__(layers=[lstars], **kwargs)
+        self.lstars = CollectionLayer(collections, **kwargs)
+        super(FilterColorPlotter, self).__init__(layers=[self.lstars], **kwargs)
         self.age = age
         self.distance = distance
         self._Av = Av
@@ -191,6 +213,42 @@ class FilterColorPlotter(CompoundPlot):
         if self._Av is not None:
             return self._Av
         return self._get_reddening('B-V') * 3.1  # 1984A&AS...58..447D
+
+    def update_limits(self, colors, limits):
+        """
+        Set axis limits for plots.
+
+        Dictionary of limits is also available via `FilterColorPlotter.limits` property.
+        Note, that limits can be changed after drawing ion returned axis object also.
+
+        Existing limits, not listed in `colors`, remains unchanged.
+
+        Parameters
+        ----------
+        colors : iterable of str
+            color(s) for which limit is set
+        limits : list of tuples or tuple
+            pairs representing limits
+            if limits is a single tuple, same limits are set for all `colors`
+
+        Example
+        -------
+
+            plotter = JohnsonCousinsPlotter(U=u, B=b, V=v)
+            plotter.update_limits('UBV', (22, 10))
+            plotter.update_limits(['U-B', 'B-V'], (-2, 2))
+        """
+        try:
+            iter(colors)
+        except TypeError:
+            colors = [colors]
+        try:
+            st = {c: (l[0], l[1]) for c,l in zip (colors, limits)}
+        except TypeError:
+            st = {c: (limits[0], limits[1]) for c in colors}
+        self.limits.update(st)
+
+
 
     def _get_reddening(self, color):
         try:
@@ -224,7 +282,22 @@ class JohnsonCousinsPlotter(FilterColorPlotter):
         errors = {c+'_e': v for c, v in zip('UVBRI', [U_e, V_e, B_e, R_e, I_e]) if v is not None}
         collections.update(errors)
         super(JohnsonCousinsPlotter, self).__init__(
-            distance, age, Av, reddenings, collections, limits=self.default_limits, **kwargs)
+            distance, age, Av, reddenings, collections, limits=dict(self.default_limits), **kwargs)
+
+
+class MultiJohnsonCousinsPlotter(JohnsonCousinsPlotter):
+    def __init__(self, U=None, B=None, V=None, R=None, I=None,
+                 U_e=None, B_e=None, V_e=None, R_e=None, I_e=None,
+                 colors=True, sizes=False,
+                 **kwargs):
+        U, B, V, R, I, U_e, B_e, V_e, R_e, I_e = (np.concatenate(t) for t in [U,B,V,R,I,U_e,B_e,V_e,R_e,I_e])
+        subsets = np.concatenate([ np.full_like(ss, n) for n, ss in enumerate(U)])
+        super(MultiJohnsonCousinsPlotter, self).__init__(
+            U, B, V, R, I, U_e, B_e, V_e, R_e, I_e, **kwargs)
+        self.lstars.subsets = subsets
+        self.lstars.colors = colors
+        self.lstars.sizes = sizes
+
 
 
 class _TestPlotter:
@@ -275,5 +348,6 @@ if __name__ == "__main__":
     B = massey['B-V'] + V
     U = massey['U-B'] + B
     plotter = JohnsonCousinsPlotter(U, B, V, distnace=1649, age=10e6, Av=1.364)
-    plotter.plot(xcolor='B-V', ycolor='V')
+    ax = plotter.plot(xcolor='B-V', ycolor='V')
+    plt.show()
 
