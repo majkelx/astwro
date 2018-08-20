@@ -334,7 +334,7 @@ class Daophot(DAORunner):
         self._get_ready_for_commands()  # wait for completion before changes in working dir
 
         l_popt, a_popt = self._prepare_input_file(photoopt)
-        l_star, a_star = self._prepare_input_file(stars)
+        l_star, a_star = self._prepare_input_file(stars, astwro.starlist.DAO.XY_FILE)
         l_phot, a_phot = self._prepare_output_file(photometry_file)
 
         commands = 'PHOT\n{}\n'.format(l_popt)
@@ -535,7 +535,7 @@ class Daophot(DAORunner):
         l_popt, a_popt = self._prepare_input_file(photoopt)
         l_psf,  a_psf  = self._prepare_input_file(psf_file)
         l_phot, a_phot = self._prepare_input_file(psf_photometry)
-        l_star, a_star = self._prepare_input_file(stars_id)
+        l_star, a_star = self._prepare_input_file(stars_id, astwro.starlist.DAO.XY_FILE)
         l_neda, a_neda = self._prepare_output_file(neda_photometry_file)
 
         commands = 'NEDA\n{}\n'.format(l_popt)
