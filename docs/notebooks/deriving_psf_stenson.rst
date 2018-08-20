@@ -263,7 +263,7 @@ convenient than not.*
     sorted_stars.renumber()
 
 Here we write sorted list back info photometry file at default name
-(overwriting existing one), because it's convinient to use default files
+(overwriting existing one), because it's convenient to use default files
 in next commands.
 
 .. code:: python

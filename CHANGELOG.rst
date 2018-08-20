@@ -5,8 +5,11 @@ All notable changes to this project will be documented in this file.
 
 Inspired by [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-[0.7.2]
+[Unreleased]
 ============
+
+[0.7.2]
+=======
 Added
 -----
 * `astwro.starlist.write_ds9_regions`: accepts astropy.table.Table` as input
@@ -26,7 +29,7 @@ Fixed
 
 
 [0.7.1]
-============
+=======
 Added
 -----
 * `gapick`: generation of control diagram
@@ -51,7 +54,7 @@ Fixed
 -----
 * `grepfitshdr`: Crash when using `-f` option with numeric field
 
-[0.7.0] -
+[0.7.0]
 =======
 Added
 -----

@@ -8,7 +8,7 @@ from collections import namedtuple
 from astwro.exttools import Runner
 import astwro.starlist as sl
 
-#TODO: Add convinirnt sorting for starlist to avoid manually sorting/writing: dp.write_starlist(sorted_stars, 'i.ap')
+#TODO: Add convenient sorting for starlist to avoid manually sorting/writing: dp.write_starlist(sorted_stars, 'i.ap')
 
 class DAORunner(Runner):
     """base for daophot package runners runner"""
