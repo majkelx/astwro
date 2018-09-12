@@ -19,9 +19,9 @@ def mag_err():
 def test_ph_error_tofit(mag_err):
     mag, err = mag_err['mag'], mag_err['mag_err']
     pe = PhotError(mag, err)
-    print (pe.err_fitted)
-    print(pe.err_means)
-    print(pe.mag_means)
+    assert pe.err_fitted.shape[0] > 0
+    assert pe.err_means.shape[0] > 0
+    assert pe.mag_means.shape[0] > 0
     assert len(pe.outlayers_mask) == len(mag)
 
 
@@ -29,8 +29,8 @@ def test_ph_error_custom_fn(mag_err):
     mag, err = mag_err['mag'], mag_err['mag_err']
     zzz = lambda x: np.percentile(x, 20) if len(x) > 0 else np.nan
     pe = PhotError(mag, err, meanfn=zzz, fitting_order=6, weighted_fit=True)
-    print (pe.err_fitted)
-    print(pe.err_means)
-    print(pe.mag_means)
+    assert pe.err_fitted.shape[0] > 0
+    assert pe.err_means.shape[0] > 0
+    assert pe.mag_means.shape[0] > 0
     assert len(pe.outlayers_mask) == len(mag)
 

@@ -5,13 +5,21 @@ All notable changes to this project will be documented in this file.
 
 Inspired by [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-[Unreleased]
+[0.7.3]
 ============
 Added
 -----
 * `astwro.coord`: `box` and `central` convenience methods for finding ceneter and box boundaty of coors array
 * `astwro.phot.DiffPhot`: Added possibility to set reference observation other than first one
 * `astwro.coord.plot_coords`: Plotting sky charts
+
+Changed
+-------
+* `gapick`: uses PSF photometry errors instead of chi in fitness function of GA
+
+Fixed
+-----
+* `astwro.pydaophot` input file type detection, for input files in daophot/allstar, improved again
 
 [0.7.2]
 =======

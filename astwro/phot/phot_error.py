@@ -7,6 +7,7 @@ import numpy as np
 from scipy.stats import sigmaclip
 from scipy.optimize import curve_fit
 from cached_property import cached_property
+import warnings
 
 
 
@@ -129,17 +130,23 @@ class PhotError(object):
 
     @cached_property
     def err_means(self):
-        ret = np.array([self.meanfn(e) for e in self.err_clipped])
+        with warnings.catch_warnings():  ## mean of empty slice allowed
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            ret = np.array([self.meanfn(e) for e in self.err_clipped])
         ret[self.err_clipped_counts == 0] = np.nan
         return ret
 
     @cached_property
     def err_means_stderr(self):
-        return np.array([np.std(e,ddof=1) for e in self.err_clipped])
+        with warnings.catch_warnings():  ## std of empty slice allowed
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            return np.array([np.nanstd(e,ddof=1) for e in self.err_clipped])
 
     @cached_property
     def mag_means(self):
-        return np.array([np.mean(ms) for ms in self.mag_clipped])
+        with warnings.catch_warnings():  ## mean of empty slice allowed
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            return np.array([np.nanmean(ms) for ms in self.mag_clipped])
 
     @cached_property
     def mean_mask(self):
