@@ -15,11 +15,32 @@ from cached_property import cached_property
 
 
 class DiffPhot(object):
-    def __init__(self, data, err, comp_stars_mask=None, lazy=True):
+    """Differential photometry as in Honeycutt 1992PASP..104..435H.
+
+    Parameters
+    ----------
+    data : array or MaskedArray
+        NxM array of N **all stars** (comparision and program) magnitudes in M observations
+    err: array or MaskedArray
+        NxM array of `data`'s standard deviations. Used for weighting.
+                    e.g. one can use Poisson noise: np.ma.sqrt(data)
+    comp_stars_mask: array of bool, (optional)
+        comparision stars, stars which variance will be minimized, default: all
+    ref_obs: None or str or int:
+        Reference observation. Correction for reference observation is by definition 0.0, all other frames
+        corrections are relative to reference one. Light curves and stars magnitudes are expressed in reference
+        frame scale.
+        If `int`, should be an number from `-M..M-1`, for positive is an index of ref frame, for negative index is
+        counted from the end. `None` is equivalent of `0`. There are two special
+        string values `"min"` and `"max"` which chooses brightest ans faintest frame respectively. Value of chosen
+        frame is available by `ref` property.
+       """
+    def __init__(self, data, err, comp_stars_mask=None, lazy=True, ref_obs=None):
         super(DiffPhot, self).__init__()
         self._data = data
         self._err = err
         self._mask_stars_comp = comp_stars_mask
+        self._ref_obs = ref_obs
         if not lazy: # force evaluate solution
             _ = self.solution
 
@@ -30,7 +51,7 @@ class DiffPhot(object):
 
     @property
     def M(self):
-        """Number of bins."""
+        """Number of observations."""
         return self.data.shape[1]
 
     @cached_property
@@ -119,6 +140,16 @@ class DiffPhot(object):
             return np.zeros(self.M, dtype=bool)
 
     @cached_property
+    def ref(self):
+        if isinstance(self._ref_obs, str):
+            return self.solution[3]
+        else:
+            if self._ref_obs < 0:
+                return self.M + self._ref_obs
+            else:
+                return self._ref_obs
+
+    @cached_property
     def solution(self):
         data = self.data[:, ~self.mask_obs_compempty]
         data_e = self.err[:, ~self.mask_obs_compempty]
@@ -163,7 +194,26 @@ class DiffPhot(object):
             nlc = np.ma.masked_all(shape=(self.N, self.M))
             nlc[:, ~self.mask_obs_compempty] = lc
             lc = nlc
-        return S, lc, O
+
+        # reference frame is 0, shift to another one if requested:
+        ref_idx = 0
+        if self._ref_obs:
+            if isinstance(self._ref_obs, str):
+                if self._ref_obs == 'min':
+                    ref_idx = O.argmin()
+                elif self._ref_obs == 'max':
+                    ref_idx = O.argmax()
+                else:
+                    raise ValueError('Allowed sting values for ref_frame are "min" nad "max". Recived "{}"'
+                                     .format(self._ref_obs))
+            else:
+                ref_idx = self._ref_obs if self._ref_obs >= 0 else len(O) + self._ref_obs
+            delta = O[ref_idx]
+            S  += delta
+            lc += delta
+            O  -= delta
+
+        return S, lc, O, ref_idx
 
     @property
     def _notimplemented(self):
