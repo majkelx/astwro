@@ -99,20 +99,20 @@ def calc_spectrum(pop):
 #     return numpy.sqrt((clipped * clipped).sum()),  # fitness is tuple (val,)
 
 # === astwro version > 0.7.0
-def fitness_for_als(als):
-    # type: (sl.StarList) -> (float,)
-    # Calucalates fitness from allstar result
-    w = 100*(-als.mag/5)
-
-    return (als.chi*w).sum()/w.sum(),  # fitness is tuple (val,)
-
-# # === astwro version >= 0.7.2
 # def fitness_for_als(als):
 #     # type: (sl.StarList) -> (float,)
 #     # Calucalates fitness from allstar result
 #     w = 100*(-als.mag/5)
 #
-#     return (als.mag_err*w).sum()/w.sum(),  # fitness is tuple (val,)
+#     return (als.chi*w).sum()/w.sum(),  # fitness is tuple (val,)
+
+# === astwro version > 0.7.2
+def fitness_for_als(als):
+    # type: (sl.StarList) -> (float,)
+    # Calucalates fitness from allstar result
+    w = 100*(-als.mag/5)
+
+    return (als.mag_err*w).sum()/w.sum(),  # fitness is tuple (val,)
 
 
 def eval_population(population, candidates, workers, show_progress, fine_tune):
