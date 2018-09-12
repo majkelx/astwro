@@ -6,7 +6,9 @@ import numpy as np
 
 
 class CoordMatch(object):
-    """Deprecated """
+    """Two catalogues crossmatch
+
+    Object interface to `astropy.coordinates.match_to_catalog_sky`"""
 
     def __init__(self, cooA, cooB, radius_match=0.5, radius_separated=None, unit=None):
         super(CoordMatch, self).__init__()

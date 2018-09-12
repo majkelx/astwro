@@ -11,3 +11,4 @@ from .coord_tools import *
 from .CoordMatch import CoordMatch
 from .XY2Sky import XY2Sky
 from .Sky2XY import Sky2XY
+from .plots import plot_coords

@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 
 from astropy.coordinates import Angle, SkyCoord
 import astropy.units as u
+from astropy.table import Table
 import numpy as np
 from os import path
 
@@ -11,16 +12,48 @@ logger = logging.getLogger(__name__)
 #logger.addHandler(logging.NullHandler())
 
 
-def central(coords, weights=None, unit=None, axies=None):
-    """ Calculates cooridnates of the center of provided set of coordinates
+def central(coords, weights=None, unit=None, axis=None):
+    """ Calculates coordinates of the center of provided set of coordinates
     """
     try:
         if coords.ndim > 1:
-            return _ndimcentral(coords, weights=weights, unit=unit, axies=axies)
+            return _ndimcentral(coords, weights=weights, unit=unit, axies=axis)
     except AttributeError:
         pass
     return  _1dimcentral(coords, weights=weights, unit=unit)
 
+def box(coords, unit=None, expand=True):
+    """ Box (rectangle) containing all the `coords`
+
+    Returns
+    -------
+    (center:SkyCoord, ra_size:Angle, dec_size:Angle)
+    """
+    unit_kwargs = {}
+    if unit is not None:
+        unit_kwargs['unit'] = unit
+    if isinstance(coords, Table):
+        try:
+            try:
+                coords = SkyCoord.guess_from_table(coords[['ra', 'dec']], **unit_kwargs)
+            except u.UnitsError:
+                coords = SkyCoord.guess_from_table(coords[['ra', 'dec']], unit=(u.hourangle, u.deg))
+        except (KeyError, AttributeError):
+            coords = SkyCoord.guess_from_table(coords, **unit_kwargs)
+    else:
+        coords = SkyCoord(coords, **unit_kwargs)
+
+    dra = coords.ra.max() - coords.ra.min()
+    ddec = coords.dec.max() - coords.dec.min()
+    cra = coords.ra.min() + dra / 2.0
+    cdec = coords.dec.min() + ddec / 2.0
+    if expand:
+        if isinstance(expand, bool):
+            expand = 1.1
+        dra  *= expand
+        ddec *= expand
+
+    return SkyCoord(cra, cdec), dra, ddec
 
 
 def _1dimcentral(coords, weights, unit):
@@ -316,6 +349,17 @@ def skycoo2xy(coo, transformer, method='try'):
 #
 
 
+def fix_scamp_wcs(hdu):
+    """Make FITS image scamp WCS headers WCSLib compatible
+
+    Warning
+    -------
+    Current implementation just removes distortion parameters,
+    astrometry is not accurate anymore!
+    """
+    for i in range(11):
+        for pv in ['PV1_{:d}', 'PV2_{:d}']:
+            hdu.header.remove(pv.format(i), ignore_missing=True, remove_all=True)
 
 
 

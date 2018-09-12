@@ -7,6 +7,11 @@ Inspired by [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 [Unreleased]
 ============
+Added
+-----
+* `astwro.coord`: `box` and `central` convenience methods for finding ceneter and box boundaty of coors array
+* `astwro.phot.DiffPhot`: Added possibility to set reference observation other than first one
+* `astwro.coord.plot_coords`: Plotting sky charts
 
 [0.7.2]
 =======
