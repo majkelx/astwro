@@ -33,7 +33,7 @@ def headers(filenames, hdus):
 def printmatch(output, filename, hdu, line, withfile, fileonly):
     if not fileonly:
         if withfile:
-            print (filename + ' hdu:{}:'.format(hdu), end='', file=output)
+            print (filename + ' hdu:{}: '.format(hdu), end='', file=output)
         print (line, file=output)
 
 def iter_fields(hdr, onlyvalues=False, fields=None):
@@ -85,6 +85,8 @@ def grep(pattern, filenames, output=stdout, invert=False, withfile=False, fileon
     return globmatched
 
 def __do(arg):
+    if isinstance(arg.hdu, str):
+        arg.hdu = [int(n) for n in arg.hdu.split(',')]
     return grep(arg.pattern, arg.file, invert=arg.v, withfile=arg.H,
                 fileonly=arg.l, fields=arg.f, ignorecase=arg.i, hdu=arg.hdu)
 
@@ -115,8 +117,8 @@ def __arg_parser():
                         help='matches only specified FIELD\'s value; can be provided multiple '
                              'times to match several fields; -f* limits search to values but searches '
                              'in all fields')
-    parser.add_argument('-n', '--hdu', nargs='+',
-                        help='HDU(s) to scan; default: HDU 0 only')
+    parser.add_argument('-n', '--hdu', metavar='x,y,z,...',
+                        help='HDU(s) to scan, comma-separated-list; default: 0')
     return parser
 
 
