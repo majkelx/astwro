@@ -16,19 +16,24 @@ from glob import glob
 import astwro.tools.__commons as commons
 
 
-def headers(filenames):
+def headers(filenames, hdus):
     for fname in filenames:
         if isfile(fname):
-            huds = pyfits.open(fname)
-            huds[0].verify('silentfix')
-            h = huds[0].header
-            huds.close()
-            yield h, fname
+            fits = pyfits.open(fname)
+            for hdu in hdus:
+                try:
+                    fits[hdu].verify('silentfix')
+                    h = fits[hdu].header
+                    yield h, fname, hdu
+                except IndexError:
+                    print('[WARN] HDU {} non exist in file {}'.format(hdu, fname))
+            fits.close()
 
-def printmatch(output, filename, line, withfile, fileonly):
+
+def printmatch(output, filename, hdu, line, withfile, fileonly):
     if not fileonly:
         if withfile:
-            print (filename + ': ', end='', file=output)
+            print (filename + ' hdu:{}:'.format(hdu), end='', file=output)
         print (line, file=output)
 
 def iter_fields(hdr, onlyvalues=False, fields=None):
@@ -48,18 +53,18 @@ def iter_fields(hdr, onlyvalues=False, fields=None):
             yield line
 
 
-
 def grep(pattern, filenames, output=stdout, invert=False, withfile=False, fileonly=False,
-         fields=None, onlyvalues=False, ignorecase=True):
+         fields=None, onlyvalues=False, ignorecase=True, hdu=None):
     if fields is not None and fields[0] == '*':
         fields = None
         onlyvalues = True
-
+    if hdu is None:
+        hdu = [0]
     if isinstance(filenames, str):
         filenames = glob(filenames)
     regexp = re.compile(pattern, flags=re.IGNORECASE if ignorecase else  0)
     globmatched = 0
-    for h, f in headers(filenames):
+    for h, f, n in headers(filenames, hdus=hdu):
         matched = scanned = 0
         # rep = repr(h).strip()
         # for line in rep.splitlines():
@@ -70,7 +75,7 @@ def grep(pattern, filenames, output=stdout, invert=False, withfile=False, fileon
             scanned += 1
             if match:
                 matched += 1
-                printmatch(output, f, line, withfile, fileonly)
+                printmatch(output, f, n, line, withfile, fileonly)
                 if fileonly and not invert:
                     break
         globmatched += matched
@@ -80,8 +85,8 @@ def grep(pattern, filenames, output=stdout, invert=False, withfile=False, fileon
     return globmatched
 
 def __do(arg):
-    return  grep(arg.pattern, arg.file, invert=arg.v, withfile=arg.H,
-                 fileonly=arg.l, fields=arg.f, ignorecase=arg.i)
+    return grep(arg.pattern, arg.file, invert=arg.v, withfile=arg.H,
+                fileonly=arg.l, fields=arg.f, ignorecase=arg.i, hdu=arg.hdu)
 
 
 def __arg_parser():
@@ -110,6 +115,8 @@ def __arg_parser():
                         help='matches only specified FIELD\'s value; can be provided multiple '
                              'times to match several fields; -f* limits search to values but searches '
                              'in all fields')
+    parser.add_argument('-n', '--hdu', nargs='+',
+                        help='HDU(s) to scan; default: HDU 0 only')
     return parser
 
 
