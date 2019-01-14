@@ -5,9 +5,9 @@ __metaclass__ = type
 import shutil
 from tempfile import mkdtemp
 from copy import deepcopy
+from os import PathLike
 
-
-class TmpDir(object):
+class TmpDir(PathLike):
     """
     instances of TmpDir keeps track and lifetime of temporary directory
     """
@@ -60,6 +60,10 @@ class TmpDir(object):
         else:
             new.__init__(use_existing=self.path)
         return new
+
+    def __fspath__(self):
+        """Implements ``os.PathLike interface``"""
+        return str(self)
 
     def _rm_dir(self):
         """Deletes working dir with all content."""
