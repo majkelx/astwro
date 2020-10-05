@@ -129,15 +129,18 @@ class StarList(pd.DataFrame):
         return sl
 
     def radec_hmsdms_from_skycoord(self, coo):
+        """Uses external `xy2sky` tool """
         self['ra'] =  coo.ra.to_string(sep=':', unit=u.hourangle, pad=True)
         self['dec'] = coo.dec.to_string(sep=':', unit=u.deg, pad=True, alwayssign=True)
 
     def radec_deg_from_hmsdms(self):
+        """Uses external `xy2sky` tool """
         sky = SkyCoord(self.ra, self.dec, unit=(u.hourangle, u.deg))
         self['ra_deg'] = sky.ra.deg
         self['dec_deg'] = sky.dec.deg
 
     def radec_hmsdms_from_deg(self):
+        """Uses external `xy2sky` tool """
         sky = SkyCoord(self.ra_deg, self.dec_deg, unit=u.deg)
         self['ra'] = sky.ra.to_string(sep=':', pad=True, unit=u.hourangle)
         self['dec'] = sky.dec.to_string(sep=':',pad=True, alwayssign=True)
@@ -157,3 +160,20 @@ class StarList(pd.DataFrame):
             x,y = skyradec2xy(self.ra, self.dec, unit=(u.hourangle, u.deg),  transformer=fitsimage)
         self['x'] = x
         self['y'] = y
+
+    def magnitudes(self):
+        """Returns magnitudes array from columns mag, A2, A3, ..."""
+        columns = ['mag'] + list(DAO._apert_columns)
+        return self.array_from_columns(columns)
+
+
+    def magnitudes_err(self):
+        """Returns magnitudes errors array from columns mag_err, A2_err, A3_err, ..."""
+        columns = ['mag_err'] + list(DAO._ap_err_columns)
+        return self.array_from_columns(columns)
+
+    def array_from_columns(self, columns):
+        # only existing columns
+        existing = self.columns.values.tolist()
+        columns = [c for c in columns if c in existing]
+        return self[columns].to_numpy()

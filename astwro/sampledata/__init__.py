@@ -36,6 +36,10 @@ def head_file():
     """patch of sample ASCII fits header file"""
     return __sampledata('astrometry.head')
 
+def sampledata_dir():
+    import os
+    return os.path.abspath(os.path.dirname(__file__))
+
 def __sampledata(filename):
     import os
-    return os.path.join(os.path.abspath(os.path.dirname(__file__)), filename)
+    return os.path.join(sampledata_dir(), filename)

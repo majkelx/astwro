@@ -39,3 +39,46 @@ github_ Installation
 One can also install unreleased version from github_
 
 .. _github: https://github.com/majkelx/astwro
+
+
+Configuration
+=============
+
+`astwro.cfg` configuration file
+-------------------------------
+The :mod:`astwro` module  uses configuration file `astwro.cfg`.
+
+On import, astwro is looking for `astwro.cfg`
+in the following directories::
+
+  /etc/astwro/
+  ~/.config/astwro/
+  ./
+
+and reads found files in that order, overwriting repeated parameters.
+
+The default configuration file is included in the module:
+`[astwro path]/config/config/astwro.cfg`
+and can be used as template for creating user's own ones.
+
+Default configuration -- default `astwro.cfg` file content::
+
+    # Patches (optional) and names of executables
+    [executables]
+    daophot = sdaophot
+    allstar = sallstar
+    fnpeaks = fnpeaks
+    diffphot = diffphot3
+    sextractor = sex
+    scamp = scamp
+    sky2xy = sky2xy
+    xy2sky = xy2sky
+
+    # Location of standard config files
+    [files]
+    # daophot.opt =
+    # allstar.opt =
+    # photo.opt =
+    # sextractor.conf =
+    # sextractor.param =
+

@@ -1,7 +1,7 @@
 from .TmpDir import TmpDir
 from .CycleFile import CycleFile
 from .ProgressBar import ProgressBar
-
+from .fits_list import make_fits_table
 
 def tmpdir(use_existing=None, prefix='astwro_tmp_', base_dir=None):
     """

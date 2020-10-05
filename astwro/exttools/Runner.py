@@ -262,8 +262,8 @@ class Runner(object):
 
 
     @staticmethod
-    def _runner_dir_file_name(filepath='', prefix='', suffix='', signature=None):
-        # type: (str, str, str, str) -> str
+    def _runner_dir_file_name(filepath='', prefix='', suffix='', signature=None, maxlen=30):
+        # type: (str, str, str, str, int) -> str
         """Generates name used in Runner local dir for filepath
 
         Files processed by underlying process are always in it's working directory
@@ -273,18 +273,22 @@ class Runner(object):
         """
         if signature is None:
             signature = filepath
+        basename, ext = os.path.splitext(os.path.basename(filepath))
+        maxbasename = maxlen - 7 - len(suffix) - len(prefix) - len(ext)
+        if maxbasename < 0:
+            raise ValueError('Can not fit working dir filename in manxlen={} characters with prefix={} and suffix={}'
+                             .format(maxlen, prefix, suffix))
 
-        return prefix \
-               + str(hashlib.md5(str(signature).encode()).hexdigest())[:6] \
-               + '_' \
-               + os.path.basename(filepath) + suffix
+        basename = basename[: maxbasename]  # cut basename to fit
+
+        return prefix + str(hashlib.md5(str(signature).encode()).hexdigest())[:6] + '_' + basename + suffix + ext
 
     def _prepare_output_file(self, data, preservefilename=False):
-        # type: (str) -> (str, str)
+        # type: (str, bool) -> (str, str)
         return self._prepare_io_file(data, output=True, preservefilename=preservefilename)
 
     def _prepare_input_file(self, path, preservefilename=False):
-        # type: (str) -> (str, str)
+        # type: (str, bool) -> (str, str)
         return self._prepare_io_file(path, output=False, preservefilename=preservefilename)
 
     def _prepare_io_file(self, path, output, preservefilename=False):

@@ -21,16 +21,19 @@ Overview
 
 Set of modules developed in Astronomical Institute of Wroclaw University.
 Contains wrappers for `daophot` package, star lists manipulation as `pandas` DataFrames with
-export/import to `daophot` and `ds9` formats, genetic algorithm for searchin for optimal PSF stars and other.
+export/import to `daophot` and `ds9` formats, genetic algorithm for searching for optimal PSF stars and other.
 
-Instalation
-===========
+Installation
+============
 
 .. code:: bash
 
     $ pip install astwro
 
-.. note:: You must have modern DAOPHOT suite installed to use `pydaophot` module (no no no IRAF's daophot).
+You should setup paths to executables (e.g. your `daophot`).
+`See documentation <https://astwro.readthedocs.io/en/latest/installation.html#astwro-cfg-configuration-file>`_.
+
+.. note:: You must have modern DAOPHOT suite installed to use `pydaophot` submodule (not IRAF's daophot).
 
 Modules
 =======
@@ -66,6 +69,6 @@ Package contains following modules:
 
 Contact
 =======
-For any comments or wishes plaese e-mail for the following alias: astwro.0.5@2007.gfdgfdg.com
+For any comments or wishes please e-mail for the following alias: astwro.0.5@2007.gfdgfdg.com
 
 For any issues please use github tracker: https://github.com/majkelx/astwro/issues

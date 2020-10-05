@@ -7,42 +7,8 @@ astwro.pydaophot
 The :mod:`astwro.pydaophot` module provides an interface to the command line tools of Peter B. Stetson `daophot` and `allstar`
 
 
-
-Configuration
-=============
-
-`pydaophot.cnf` configuration file
-----------------------------------
-The :mod:`astwro.pydaophot` Module  uses configuration file `pydaophot.cfg`.
-
-On import, pydaophot is looking for `pydaophot.cfg`
-in the following directories::
-
-  /etc/pydaophot/
-  ~/.config/pydaophot/
-  ./
-
-and reads found files in that order, overwriting repeat parameters.
-
-The default configuration file is included in the module:
-`[astwro path]/pydaophot/config/pydaophot.cfg`
-and can be used as template for creating user's own ones.
-
-Default configuration -- default `pydaophot.cfg` file content::
-
-    # Patches (optional) and names of executables
-    [executables]
-    daophot = sdaophot
-    allstar = sallstar
-
-    # Location of standard config files
-    [files]
-    # daophot.opt =
-    # allstar.opt =
-    # photo.opt =
-
 Daphot/Allstar `opt`-configuration files
-----------------------------------------
+========================================
 The module provides various options to indicate the location of following `daophot` configuration files::
 
   daophot.opt
@@ -58,13 +24,13 @@ Routines searches the following locations in the order provided:
 * working directory -- if working directory of script process (not to be confused with
   :class:`~astwro.pydaophot.Daophot` object's working directory - *runner directory*!) contains `opt` file, this file will
   be used.
-* `pydaophot.cfg` -- the module configuration file contains section `[files]` where
+* `astwro.cfg` -- the astwro configuration files contains section `[files]` where
   location of the `opt` files can be specified.
 * default files -- if module cannot locate `opt` file in locations below, uses the
   default file located in `[astwro path]/pydaophot/config`.
 
 Note, that the presented order of searching means, that e.g. the working directory
-`daophot.opt` file have priority over another one provided in  `pydaophot.cfg`.
+`daophot.opt` file have priority over another one provided in  `astwro.cfg`.
 
 Files and directories
 =====================

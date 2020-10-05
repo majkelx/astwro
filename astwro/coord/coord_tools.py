@@ -176,6 +176,83 @@ def grouping(index, dist, radius, labels=None, unique_labels=True):
     return [groups[k] for k in grp_names], [grlabels[k] for k in grp_names],[translate[assigned[i]] for i in range(len(assigned))]
 
 
+def find_duplicates(catalogue, radius, coord_col=None, ra_col=None, dec_col=None, radec_unit=None, weight_fn=None):
+    """
+    Finds close neighbours
+
+   Usage ::
+
+        mask, new_coo = find_duplicates(star_list, 0.5*u.arcsec)
+        new_starlist = star_list[mask]
+        new_starlist['ra_deg'] = new_coo.ra
+        new_starlist['dec_deg'] = new_coo.dec
+
+    Parameters
+    ----------
+    catalogue : SkyCoord  or array_like or StarList
+        Catalogue
+    radius : float or Quantity
+        Matching radius
+    ra_col : int or str, optional
+        Index of catalog column for RA (only if catalogs are not SkyCoord).
+    dec_col : int or str, optional
+        Index of catalog column for DEC (only if catalogs are not SkyCoord).
+    coord_col : int or str, optional
+        Index of catalog column of type SkyCoord (only if catalogs are `astropy.table.Table` with SkyCoord column).
+    radec_unit : astropy.unit, optional
+        Unit for ra,dec cols conversion: `astropy.coordinates.SkyCoord(cat[ra_col], cat[dec_col], unit=radec_unit)`
+    weight_fn : callable, optional
+        Function returning weight for given catalogue element. Default: `lambda x: 1.0`
+
+    Returns
+    -------
+    coords : SkyCoord
+        Coordinates of matched objects
+    weights: list
+        Summed weights for groups
+    src : list of sets
+        Source catalogs for matched objects - sets of catalog indexes
+
+    """
+
+    logger.info('Starting self-matching catalogue'.format(len(catalogue)))
+    # weighting  (calc weight for element of joined catalog)
+    if weight_fn is None:
+        weights = [1.0] * len(catalogue)
+    else:
+        weights = [weight_fn(r) for r in catalogue]
+        logger.info('Weigths applied')
+
+    # prepare coords
+    if coord_col:
+        assert ra_col is None and dec_col is None, 'Either coord_col or (ra_col,dec_col) can be specified but not both'
+        coords = catalogue[coord_col]
+    elif ra_col or dec_col:
+        assert ra_col and dec_col, 'Both or none of ra_col and dec_col can be specified'
+        skykwargs = {'unit': radec_unit} if radec_unit is not None else {}
+        coords = SkyCoord(catalogue[ra_col], catalogue[dec_col], **skykwargs)
+    else:
+        try:
+            coords = catalogue.to_skycoords()  # StarList?
+        except AttributeError:
+            coords = catalogue
+
+    c = coords
+    w = np.array(weights)
+
+    # calc distances
+    idx, dis, _ = coords.match_to_catalog_sky(coords, nthneighbor=2)
+    # group
+    grp, lbl, assgn = grouping(idx, dis, radius=radius, unique_labels=False)
+    mask = [i == min(grp[ass]) for i, ass in enumerate(assgn)]
+    logger.info('{:6d} objects left'.format(len(grp)))
+
+    # calc coord and weights for groups
+    c = SkyCoord([mean_coord(c[list(g)], w[list(g)]) for g in grp], unit=u.deg)
+
+    return mask, c
+
+
 
 def match_catalogues(catalogues, radius, selfmatch_radius=0.0, max_iter=200,
                      coord_col=None, ra_col=None, dec_col=None, radec_unit=None, weight_fn=None):
@@ -286,7 +363,7 @@ def match_catalogues(catalogues, radius, selfmatch_radius=0.0, max_iter=200,
 
 
 def mean_coord(sky_coords, weigths=None):
-    if isinstance(mean_coord, SkyCoord):
+    if isinstance(mean_coord, SkyCoord):  ## TODO: something is wrong here!
         coo = np.array([sky_coords.ra.ra, sky_coords.ra.deg])
     else:
         coo = np.array([[s.ra.deg, s.dec.deg] for s in sky_coords]).T
@@ -312,14 +389,17 @@ def mean_coord(sky_coords, weigths=None):
 
 
 def xy2sky(x, y, transformer, method='try'):
+    """Uses external `xy2sky` tool """
     from astwro.coord import XY2Sky
     return XY2Sky(transformer)(x,y)
 
 def skyradec2xy(ra, dec, unit='deg', transformer=None, method='try'):
+    """Uses external `xy2sky` tool """
     from astwro.coord import Sky2XY
     return Sky2XY(transformer)(ra=ra, dec=dec, unit=unit)
 
 def skycoo2xy(coo, transformer, method='try'):
+    """Uses external `xy2sky` tool """
     from astwro.coord import Sky2XY
     return Sky2XY(transformer)(coo=coo)
 

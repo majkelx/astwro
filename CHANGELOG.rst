@@ -5,11 +5,18 @@ All notable changes to this project will be documented in this file.
 
 Inspired by [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-[pending]
+[0.7.5]
 =========
 Added
 -----
-* `astwro.utils.TempDir` is noe `os.PathLike`.
+* `astwro.utils.TempDir` is now `os.PathLike`.
+* `astwro.utils.fits_list` for collecting data from set of fits and build `astropy.Table` out of that.
+* `astwro.coord.find_duplicates`
+* `astwro.starlist.Starlist`: `magnitudes`, `magnitudes_err`, `array_from_columns` convenience methods
+
+Fixed
+-----
+* Long filenames used in `astwro.pydaophot.Daophot` and `astwro.pydaophot.Allstar` caused errors.
 
 [0.7.3]
 =======

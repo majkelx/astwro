@@ -55,7 +55,7 @@ class Daophot(DAORunner):
         """
         :param str dir:          pathname or TmpDir object - working directory for daophot,
                                    if None temp dir will be used and deleted on `Daophot.close()`
-        :param str image:        if provided this file will be automatically attached (AT) as first daophot command
+        :param str image:        if provided, this file will be automatically attached (AT) as first daophot command
                                    setting image property has same effect
         :param str daophotopt:   daophot.opt file, if None build in default file will be used, can be added later
                                    by `Runner.copy_to_runner_dir(file, 'daophot.opt')`
@@ -116,7 +116,7 @@ class Daophot(DAORunner):
         if self.options:
             self._enqueueOPtions(self.options, on_beginning=True)
         if self.image:
-            self._equeueATtach(self.expand_path(self.image), on_beginning=True)
+            self._enqueueATtach(self.expand_path(self.image), on_beginning=True)
 
         # just for consume options daophot presents on the beginning
         opt_processor = DPOP_OPtion()
@@ -135,7 +135,7 @@ class Daophot(DAORunner):
         self.link_to_runner_dir(self.daophotopt, 'daophot.opt')
 
 
-    def _equeueATtach(self, image_file, on_beginning=False):
+    def _enqueueATtach(self, image_file, on_beginning=False):
         # type: (str, bool) -> DPOP_ATtach
         image_file, _ = self._prepare_input_file(image_file)
         processor = DPOP_ATtach()
@@ -206,7 +206,7 @@ class Daophot(DAORunner):
 
         self._get_ready_for_commands()  # wait for completion before changes in working dir
 
-        return self._equeueATtach(image_file)
+        return self._enqueueATtach(image_file)
 
 
     def EXit(self):

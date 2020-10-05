@@ -5,7 +5,7 @@ import glob
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
-from astwro.coord import CoordMatch, central, grouping, match_catalogues
+from astwro.coord import CoordMatch, central, grouping, match_catalogues, find_duplicates
 
 
 def teat_test():
@@ -86,6 +86,13 @@ def test_matching():
                                # weight_fn=lambda x: x['mag_err']**-2,
                                )
     pass
+
+def test_selfmatching():
+    catalog = SkyCoord([(10.0, 10.0), (20.0, 20.0), (30.0, 30.0), (30.1, 30.1), (50.0, 50.0), (50.1, 50.1), ], unit=u.deg)
+
+    mask, coo = find_duplicates(catalog, 1*u.deg)
+    newcat = catalog[mask]
+    assert len(newcat) == len(coo)
 
 
 # def test_matching():

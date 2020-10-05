@@ -45,7 +45,7 @@ class Sextractor(Runner):
     param : str, optional
         Patch to sextractor's parameters file (specified in conf), Default: package default file
     conv : str, optional
-        Patch to sextractor's convolution file (specified in conf), Default: package default file
+        Patch to sextractor's convolution kernel file (specified in conf), Default: package default file
     """
 
     def __init__(self, dir=None, conf=None, param=None, conv=None, output=None):
